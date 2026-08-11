@@ -111,3 +111,10 @@
 - [x] Save the owner-approved neutral Project Reclaim note against the published Community Development Commission source and verify it remains visible only to the owner.
 - [x] Document the current governance decision: retain one First Executive account, defer a distinct personal operator principal, and define conditions for revisiting that choice.
 - [x] Record the completed Mendocino publication and Lake County watchlist posture, including the no-publication gate for Lake County.
+- [x] Add an accessible ROOT connection-status indicator that distinguishes active, reconnecting, and disconnected states without telemetry.
+- [x] Implement bounded automatic reconnect attempts with a visible countdown and an explicit manual retry control.
+- [x] Add a user-friendly disconnection panel with privacy-safe troubleshooting guidance and no sensitive diagnostic exposure.
+- [x] Build a distinct Truth Talk viewing surface with a mobile swipe-first short-form feed and desktop long-form discovery layout while preserving provenance and consent boundaries.
+- [x] Verify connection recovery behavior and Truth Talk presentation with automated tests, responsive screenshots, TypeScript, and the full test suite.
+- [x] Add deterministic connection-state tests for failure, countdown progression, bounded automatic retry, manual retry, and restoration.
+- [x] Capture deterministic visual evidence for active, reconnecting, and disconnected connection-status states before checkpointing.

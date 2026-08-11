@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import ConnectionStatus from "@/components/ConnectionStatus";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -8,6 +9,7 @@ import Home from "./pages/Home";
 import IssuerWorkspace from "./pages/IssuerWorkspace";
 import MemberWorkspace from "./pages/MemberWorkspace";
 import ProjectReclaim from "./pages/ProjectReclaim";
+import TruthTalk from "./pages/TruthTalk";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -15,6 +17,7 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/app"} component={MemberWorkspace} />
+      <Route path={"/truth"} component={TruthTalk} />
       <Route path={"/reclaim"} component={ProjectReclaim} />
       <Route path={"/issuer"} component={IssuerWorkspace} />
       <Route path={"/issuer/nodes"} component={IssuerWorkspace} />
@@ -40,6 +43,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <ConnectionStatus />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
