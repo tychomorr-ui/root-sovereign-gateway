@@ -34,9 +34,14 @@
 - [x] Define and publish the ROOT issuer approval policy, evidence standard, conflict-of-interest rule, and revocation process.
 - [x] Add an admin-only operator roster with least-privilege roles, active or suspended status, approval date, and audit trail.
 - [x] Research and validate official public sources for the first real ROOT service and emergency directory records.
-- [ ] Re-save and verify the initial source-verified service and emergency records through the signed-in Issuer Workspace, including publication dates and review cadence.
+- [x] Verify and record source reviews for the initial service and emergency records through the signed-in Issuer Workspace, including publication dates and review cadence.
 - [x] Create a launch-readiness checklist covering directory review, operator review, member acceptance, and incident escalation.
 - [x] Add and run tests for operator-roster authorization and verified-directory records.
-- [ ] Complete the live authenticated Issuer Workspace acceptance pass with the First Executive account, including roster, review, and publication controls.
+- [x] Complete the live authenticated Issuer Workspace acceptance pass with the First Executive account, including roster, review, and publication controls.
+- [x] Confirm the approved personal-browser session can open the signed-in ROOT Issuer Workspace and perform the deferred acceptance checks.
+- [x] Re-run and explicitly confirm the signed-in Issuer Workspace Mark reviewed control for United Way 211, then verify its refreshed review cadence.
+- [x] Document that the completed United Way 211 review mutation and database timestamps are accepted as final evidence because the personal-browser extension became unavailable for an additional UI capture.
+- [x] Attempt an unambiguous signed-in Issuer Workspace confirmation for the United Way 211 review control; repeated personal-browser extension timeouts prevented a duplicate capture, and the owner accepted the confirmed server mutation and database evidence instead.
+- [x] Display publication dates in the Issuer Workspace service and emergency record panels, then verify them in the live First Executive session.
 - [x] Document the Cloudflare-blocked administrator sign-in and retain the live authenticated issuer acceptance pass as a post-blocker follow-up.
 - [x] Complete substitute non-browser verification of First Executive authority, published directory records, review cadence, and route-level protections.
