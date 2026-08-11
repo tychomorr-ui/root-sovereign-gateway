@@ -50,6 +50,14 @@
 - [x] Validate official public sources and review cadence for each proposed regional emergency or service directory entry.
 - [ ] When a real distinct member account is approved as an additional operator, create it only through the authorized intake workflow; the current rollout has no additional operator.
 - [ ] After an additional operator is approved, verify that operator’s least-privilege scope, review metadata, and publication boundaries; the current First Executive and source posture is already verified.
+- [x] Privately verify the two newly supplied ROOT member codes and determine whether either maps to a distinct member account eligible for a separate operator role.
+- [x] Prepare a private draft-only least-privilege operator intake for an eligible distinct account, without activating any authority.
+- [x] Create the owner-authorized Directory Steward draft for Mendocino source review and Lake County private-watchlist monitoring with the conservative non-partnership conflict disclosure.
+- [x] Restart ROOT after the reported development-service interruption and verify the application reaches a clean running state.
+- [ ] Recover the managed browser-control session after the reported VNC disconnection and verify it is usable before requesting issuer sign-in again.
+- [ ] Verify the currently signed-in account’s ROOT issuer authority and use the authorized intake workflow if it is the First Executive account.
+- [x] Invoke the existing First Executive-protected intake procedure to save the owner-authorized Directory Steward record as a draft only, with duplicate and active-operator safeguards.
+- [x] Verify the exact submitted Directory Steward intake, the decline audit for its incomplete superseded draft, and the absence of any operator record for the candidate.
 - [x] Define a provenance-led Truth Talk model that distinguishes source verification, evidence review, and unresolved claims without asserting universal truth.
 - [x] Design a global resource-directory federation with regional coverage, source verification, review cadence, and safe emergency-content handling.
 - [x] Define a non-graphic or standard mode and a clearly warned unrestricted-news mode with lawful moderation, consent, and age-appropriate safeguards.
