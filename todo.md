@@ -46,10 +46,10 @@
 - [x] Document the Cloudflare-blocked administrator sign-in and retain the live authenticated issuer acceptance pass as a post-blocker follow-up.
 - [x] Complete substitute non-browser verification of First Executive authority, published directory records, review cadence, and route-level protections.
 - [x] Define the next-stage ROOT architecture as a privacy-preserving recursive capability model with measurable, testable layers.
-- [ ] Collect approved operator member codes, labels, role assignments, conflict disclosures, and target regions before creating roster or directory records.
+- [x] Complete the current operator-intake decision: retain the single First Executive record and defer any additional operator until a distinct member account and approval packet exist.
 - [x] Validate official public sources and review cadence for each proposed regional emergency or service directory entry.
-- [ ] Add only user-approved operators and source-verified regional resources through ROOT’s authorized issuer workflow.
-- [ ] Verify least-privilege access, publication state, and review metadata for the new operator and regional directory entries.
+- [ ] When a real distinct member account is approved as an additional operator, create it only through the authorized intake workflow; the current rollout has no additional operator.
+- [ ] After an additional operator is approved, verify that operator’s least-privilege scope, review metadata, and publication boundaries; the current First Executive and source posture is already verified.
 - [x] Define a provenance-led Truth Talk model that distinguishes source verification, evidence review, and unresolved claims without asserting universal truth.
 - [x] Design a global resource-directory federation with regional coverage, source verification, review cadence, and safe emergency-content handling.
 - [x] Define a non-graphic or standard mode and a clearly warned unrestricted-news mode with lawful moderation, consent, and age-appropriate safeguards.
@@ -80,7 +80,7 @@
 - [x] Verify the owner-submitted private intake is in draft status and accurately reflects the supplied member code, role, scope, and conflict disclosure.
 - [x] Obtain explicit confirmation of the reviewed candidate details before making any operator-intake decision.
 - [x] Verify the resulting operator roster and private intake decision audit after the confirmed reviewed outcome.
-- [ ] Decide whether a distinct personal operator principal is needed; the generated personal code is a private identity reference under the existing account and cannot be used as a second operator record.
+- [x] Decide that a distinct personal operator principal is not needed in the current pilot; the personal code remains a private reference until a genuinely separate member account is warranted.
 - [x] Correct the duplicate business-identity intake without granting authority; the personal code remains a non-authority identity reference rather than a separate operator principal.
 - [x] Decline the user-confirmed duplicate business-identity intake with a private decision note and verify the audit event.
 - [x] Add a private personal ROOT identity setup path that creates and reveals its code only to the owner.
@@ -101,3 +101,5 @@
 - [x] Add and run automated coverage for Project Reclaim published-only visibility and member-interest ownership privacy.
 - [x] Save one owner-approved Project Reclaim private interest note, verify it appears only in the signed-in member ledger, and record read-only ownership evidence.
 - [x] Save the owner-approved neutral Project Reclaim note against the published Community Development Commission source and verify it remains visible only to the owner.
+- [x] Document the current governance decision: retain one First Executive account, defer a distinct personal operator principal, and define conditions for revisiting that choice.
+- [x] Record the completed Mendocino publication and Lake County watchlist posture, including the no-publication gate for Lake County.
