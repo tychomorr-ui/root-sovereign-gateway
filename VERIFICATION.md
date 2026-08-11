@@ -36,6 +36,8 @@ The authenticated First Executive issuer workspace displays private text fields 
 
 On August 11, 2026, the authenticated owner generated a private personal ROOT code in the Member Gateway Identity panel. The code is visible only in the signed-in owner workspace. A database check confirmed that creating this card did not create a second operator record or change the existing business First Executive role. The personal code is therefore a private identity reference, not a second login or an independent operator principal.
 
+The duplicate Directory Steward intake that referenced the existing business First Executive identity was declined on the owner’s explicit confirmation. The private intake ledger shows the declined state and decision note, and the separate append-only audit ledger records the First Executive actor and timestamp. The active roster remains unchanged with only the First Executive record active.
+
 ## Completed A1 regional-directory acceptance
 
 On August 11, 2026, the authenticated First Executive session used the corrected `/issuer?tab=services` and `/issuer?tab=emergency` deep links to publish two source-verified Mendocino County records: Employment & Family Assistance Services — Ukiah and Behavioral Health & Recovery Services’ 24/7 Crisis Line. Each record visibly displayed **A1 · NEXINUS Business Anchor** in its managed ledger and carried its publication, verification, and review dates. A direct database check confirmed the persisted `nodeId` is A1 for both entries.

@@ -78,10 +78,11 @@
 - [x] Add a private immutable intake-decision audit record for both First Executive approvals and declines, including actor, timestamp, and decision note.
 - [x] Verify automated coverage proves both private intake approval and decline write an audit record before the workflow is considered complete.
 - [x] Verify the owner-submitted private intake is in draft status and accurately reflects the supplied member code, role, scope, and conflict disclosure.
-- [ ] Obtain explicit confirmation of the reviewed candidate details before granting the requested operator role.
-- [ ] Verify the resulting operator record and private intake decision audit after an approved activation.
+- [x] Obtain explicit confirmation of the reviewed candidate details before making any operator-intake decision.
+- [x] Verify the resulting operator roster and private intake decision audit after the confirmed reviewed outcome.
 - [ ] Decide whether a distinct personal operator principal is needed; the generated personal code is a private identity reference under the existing account and cannot be used as a second operator record.
-- [ ] Correct the duplicate business-identity intake without approving it, then prepare a new private intake only for the verified personal identity.
+- [x] Correct the duplicate business-identity intake without granting authority; the personal code remains a non-authority identity reference rather than a separate operator principal.
+- [x] Decline the user-confirmed duplicate business-identity intake with a private decision note and verify the audit event.
 - [x] Add a private personal ROOT identity setup path that creates and reveals its code only to the owner.
 - [x] Preserve the existing business First Executive identity and prevent the new personal identity card from inheriting any business or operator authority.
 - [x] Verify the owner can retrieve the new personal member code privately and that the business identity remains unchanged.
