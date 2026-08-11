@@ -1,0 +1,40 @@
+# ROOT Verification Record
+
+This record describes the verification completed for the current ROOT build and identifies the final acceptance actions that require a member to exercise their own authenticated account. ROOT contains no seeded member data, fabricated testimonials, fictional services, or sample emergency resources.
+
+## Completed automated checks
+
+| Verification area | Evidence | Result |
+|---|---|---|
+| Type safety | `pnpm check` | Passed after the final application changes. |
+| Unit and router tests | `pnpm test` | Passed: 4 test files and 13 tests. |
+| Exact Truth Talk claim labels | Policy test checks the six approved labels. | Passed. |
+| TruthOK semantics | Policy test checks four discrete states and contains no binary verdict output. | Passed. |
+| Consent receipt | Policy test checks recipient, fields, purpose, and expiry language. | Passed. |
+| Private access | Router tests reject unauthenticated profile, permission, member-record, Truth Talk, and vouch access. | Passed. |
+| Consent ownership | Router test confirms the signed-in owner is passed to consent revocation. | Passed. |
+| Vouch authority | Router tests allow only a recipient to respond and only a participant to revoke. | Passed. |
+| Emergency location | Policy test asserts that location persistence is false. | Passed. |
+| Local file proof | Policy test checks stable SHA-256 digest derivation without file upload. | Passed. |
+| Analytics guard | Policy test confirms the ROOT entry document has no Umami or website-id script loader. | Passed. |
+
+## Completed visual checks
+
+The public ROOT gateway was reviewed at desktop and phone-sized viewports. The member identity workspace was also reviewed at desktop and phone-sized viewports. A mobile overflow caused by the horizontally scrollable member navigation was corrected and rechecked. The current interface preserves readable typography, visible action controls, high-contrast buttons, and a mobile horizontal navigation strip for member sections.
+
+## Member acceptance scenarios
+
+These actions require a real authenticated member account and must be completed before a public launch. They are designed as a concise acceptance walkthrough rather than hidden behavior.
+
+| Scenario | Expected result |
+|---|---|
+| Update display name | The member sees their own code and verification level, changes a display name, and the value persists after reload. |
+| Grant and revoke access | The member creates a named, field-scoped grant, receives a human-readable receipt, then revokes the grant from the permissions ledger. |
+| Publish Truth Talk claim | The member selects one approved claim type, optionally derives a local file hash, adds sources, publishes, and sees four individual TruthOK signals plus an integrity receipt. |
+| Vouch lifecycle | One member sends a scope-specific vouch; the recipient accepts or declines; either participant can later revoke it. |
+| Service proof | A service record published by an authorized operator returns a minimum eligibility result without exposing attestations or member-record details. |
+| Emergency lookup | Any visitor provides explicit one-time location consent, gets a resource lookup, and sees the no-persistence notice. No location record appears in the database. |
+
+## Product limitations for launch planning
+
+ROOT’s emergency-resource directory and services directory intentionally start empty because no verified real providers or resources were supplied. Populate them only from vetted, current sources and with clear provider verification procedures. The current file-integrity feature derives a local SHA-256 digest and stores only that digest with a post; it does not upload, retain, or disseminate the selected source file.

@@ -1,0 +1,26 @@
+# ROOT Implementation Checklist
+
+- [x] Define the ROOT domain model for member profiles, consent grants, attestations, Truth Talk claims, proof receipts, vouches, services, and emergency resources.
+- [x] Implement database tables and relations for every ROOT domain entity using private-by-default ownership rules.
+- [x] Add server procedures that authorize every record read and write against the signed-in member or an explicit, scoped consent grant.
+- [x] Add a member profile that supports display-name management, verification-level display, account settings, data export, and deletion requests.
+- [x] Build an auditable permissions dashboard to create, expire, revoke, and inspect field-level access grants with human-readable consent receipts.
+- [x] Build private member records for attestations, evidence status, issuers, dates, revocation states, disputes, and scoped vouches.
+- [x] Build the ROOT landing page with the exact Mirror Law pillars: Truth, Responsibility, Restoration, and Stewardship.
+- [x] Build a public-facing Truth Talk feed with the exact claim types: report, firsthand account, opinion, analysis, correction, and question.
+- [x] Add post publishing with source URLs and file integrity receipt metadata.
+- [x] Display TruthOK signals individually as identity-bound, integrity-bound, sources-declared, and review-completed, without true/false or pass/fail verdicts.
+- [x] Build scoped vouches that members can create, accept, decline, and revoke, without turning them into a universal social score.
+- [x] Build a services directory with minimum-eligibility proof that reveals no private member-record data.
+- [x] Build emergency resource lookup with explicit one-time location consent and no persistent location history.
+- [x] Ensure no third-party behavioral tracking, analytics SDKs, advertising identifiers, or persistent location storage are introduced.
+- [x] Create Vitest coverage for privacy authorization, TruthOK state rules, consent-receipt handling, vouch actions, and emergency-location non-persistence.
+- [x] Verify responsive visual behavior, accessibility basics, server type checks, and user journeys.
+- [x] Save and deliver a checkpoint only after all completed checklist items are marked done.
+- [x] Add a local-only file hash control to the Truth Talk composer and verify the digest is persisted and rendered without uploading source file bytes.
+- [x] Add router-level authorization tests for protected ROOT operations, consent ownership, and vouch-response permissions.
+- [x] Complete keyboard, focus, and key user-journey verification for member identity, consent grants, Truth Talk publishing, service proof, and emergency lookup.
+- [x] Add mocked router-level tests confirming consent-revocation ownership and vouch response or revocation enforcement.
+- [x] Add a focused regression check for local-only Truth Talk digest derivation and publication payload metadata.
+- [x] Document the available visual and automated verification evidence for ROOT’s primary flows and remaining manual acceptance checks.
+- [x] Add a router-level regression test proving that a local file digest is carried into Truth Talk publication metadata.
