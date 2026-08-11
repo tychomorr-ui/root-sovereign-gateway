@@ -116,14 +116,15 @@ export const services = mysqlTable("services", {
   name: varchar("name", { length: 140 }).notNull(),
   description: text("description").notNull(),
   serviceType: varchar("serviceType", { length: 100 }).notNull(),
-  eligibilityRequirement: varchar("eligibilityRequirement", { length: 240 }).notNull(),
-  sourceUrl: varchar("sourceUrl", { length: 500 }).notNull(),
-  verifiedAt: timestamp("verifiedAt"),
-  reviewDueAt: timestamp("reviewDueAt"),
-  publishedAt: timestamp("publishedAt"),
-  publishedByUserId: int("publishedByUserId").references(() => users.id),
-  isPublished: boolean("isPublished").notNull().default(false),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+eligibilityRequirement: varchar("eligibilityRequirement", { length: 240 }).notNull(),
+sourceUrl: varchar("sourceUrl", { length: 500 }).notNull(),
+verifiedAt: timestamp("verifiedAt"),
+reviewDueAt: timestamp("reviewDueAt"),
+publishedAt: timestamp("publishedAt"),
+publishedByUserId: int("publishedByUserId").references(() => users.id),
+  nodeId: int("nodeId"),
+isPublished: boolean("isPublished").notNull().default(false),
+createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => ({
   publishedIdx: index("services_published_idx").on(table.isPublished),
 }));
@@ -135,15 +136,16 @@ export const emergencyResources = mysqlTable("emergency_resources", {
   resourceName: varchar("resourceName", { length: 160 }).notNull(),
   contactLabel: varchar("contactLabel", { length: 280 }).notNull(),
   contactUrl: varchar("contactUrl", { length: 500 }),
-  sourceUrl: varchar("sourceUrl", { length: 500 }).notNull(),
-  latitude: varchar("latitude", { length: 32 }),
-  longitude: varchar("longitude", { length: 32 }),
-  verifiedAt: timestamp("verifiedAt"),
-  reviewDueAt: timestamp("reviewDueAt"),
-  publishedAt: timestamp("publishedAt"),
-  publishedByUserId: int("publishedByUserId").references(() => users.id),
-  isPublished: boolean("isPublished").notNull().default(false),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+sourceUrl: varchar("sourceUrl", { length: 500 }).notNull(),
+latitude: varchar("latitude", { length: 32 }),
+longitude: varchar("longitude", { length: 32 }),
+verifiedAt: timestamp("verifiedAt"),
+reviewDueAt: timestamp("reviewDueAt"),
+publishedAt: timestamp("publishedAt"),
+publishedByUserId: int("publishedByUserId").references(() => users.id),
+  nodeId: int("nodeId"),
+isPublished: boolean("isPublished").notNull().default(false),
+createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => ({
   emergencyTypeIdx: index("emergency_resources_type_idx").on(table.emergencyType, table.isPublished),
 }));
@@ -173,5 +175,37 @@ export const operatorAudits = mysqlTable("operator_audits", {
   details: varchar("details", { length: 500 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => ({
-  operatorAuditIdx: index("operator_audits_operator_idx").on(table.operatorId, table.createdAt),
+operatorAuditIdx: index("operator_audits_operator_idx").on(table.operatorId, table.createdAt),
+}));
+
+export const monarchNodes = mysqlTable("monarch_nodes", {
+  id: int("id").autoincrement().primaryKey(),
+  nodeCode: varchar("nodeCode", { length: 24 }).notNull().unique(),
+  nodeLabel: varchar("nodeLabel", { length: 140 }).notNull(),
+  layer: mysqlEnum("layer", ["anchor", "relay", "signal"]).notNull(),
+  mandate: varchar("mandate", { length: 280 }).notNull(),
+  regionLabel: varchar("regionLabel", { length: 160 }),
+  capabilityManifestJson: text("capabilityManifestJson").notNull(),
+  status: mysqlEnum("status", ["planned", "active", "suspended"]).notNull().default("planned"),
+  operatorUserId: int("operatorUserId").references(() => users.id),
+  approvedByUserId: int("approvedByUserId").notNull().references(() => users.id),
+  approvedAt: timestamp("approvedAt").defaultNow().notNull(),
+  reviewDueAt: timestamp("reviewDueAt"),
+  suspendedAt: timestamp("suspendedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  codeIdx: index("monarch_nodes_code_idx").on(table.nodeCode),
+  statusIdx: index("monarch_nodes_status_layer_idx").on(table.status, table.layer),
+}));
+
+export const monarchNodeAudits = mysqlTable("monarch_node_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  nodeId: int("nodeId").notNull().references(() => monarchNodes.id),
+  actorUserId: int("actorUserId").notNull().references(() => users.id),
+  action: mysqlEnum("action", ["registered", "reviewed", "suspended", "reactivated"]).notNull(),
+  details: varchar("details", { length: 500 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  nodeAuditIdx: index("monarch_node_audits_node_idx").on(table.nodeId, table.createdAt),
 }));

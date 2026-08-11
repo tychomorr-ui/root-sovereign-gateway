@@ -45,3 +45,25 @@
 - [x] Display publication dates in the Issuer Workspace service and emergency record panels, then verify them in the live First Executive session.
 - [x] Document the Cloudflare-blocked administrator sign-in and retain the live authenticated issuer acceptance pass as a post-blocker follow-up.
 - [x] Complete substitute non-browser verification of First Executive authority, published directory records, review cadence, and route-level protections.
+- [x] Define the next-stage ROOT architecture as a privacy-preserving recursive capability model with measurable, testable layers.
+- [ ] Collect approved operator member codes, labels, role assignments, conflict disclosures, and target regions before creating roster or directory records.
+- [ ] Validate official public sources and review cadence for each proposed regional emergency or service directory entry.
+- [ ] Add only user-approved operators and source-verified regional resources through ROOT’s authorized issuer workflow.
+- [ ] Verify least-privilege access, publication state, and review metadata for the new operator and regional directory entries.
+- [x] Define a provenance-led Truth Talk model that distinguishes source verification, evidence review, and unresolved claims without asserting universal truth.
+- [x] Design a global resource-directory federation with regional coverage, source verification, review cadence, and safe emergency-content handling.
+- [x] Define a non-graphic or standard mode and a clearly warned unrestricted-news mode with lawful moderation, consent, and age-appropriate safeguards.
+- [x] Define the Monarch recursive-protocol concept as an interoperable, testable systems pattern rather than a quantum or omniscience claim.
+- [x] Establish partnership-accuracy rules that prohibit presenting any organization as a ROOT partner without its written authorization.
+- [x] Define the 3–6–9 eighteen-node Monarch federation with named node mandates, capability boundaries, review clocks, and revocation routes.
+- [x] Verify the supplied business-node member code and create its least-privilege ROOT node assignment with an explicit scope and review date.
+- [x] Add node manifests and a private node registry without exposing node operator identities or sensitive infrastructure locations.
+- [x] Add regional-directory expansion controls that assign each verified resource to a reviewed node mandate rather than a universal unscoped operator.
+- [x] Verify node authority, consent boundaries, and revocation behavior through automated and live First Executive checks.
+- [x] Add router-level authorization coverage for Monarch node registration, review, suspension, and non-First-Executive denial.
+- [x] Run the full type and test suite after the Monarch node authorization tests, then confirm the new coverage passes.
+- [x] Verify the active A1 business anchor and the remaining seventeen planned node mandates in the signed-in Issuer Workspace.
+- [x] Add a direct Issuer Workspace Monarch-nodes route so the active anchor and planned mandates can be reviewed without manual tab navigation.
+- [x] Prove that `root-3b65c16322bc430e` resolves to the user assigned to the active A1 business anchor, then record the private evidence.
+- [x] Expand node tests to cover only the implemented suspension or reactivation and resource-assignment boundary behaviors, without claiming unimplemented consent-revocation semantics.
+- [x] Complete and document a live authenticated First Executive acceptance pass for `/issuer/nodes`, including A1, planned mandates, and a node review action.

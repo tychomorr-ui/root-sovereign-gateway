@@ -7,7 +7,7 @@ This record describes the verification completed for the current ROOT build and 
 | Verification area | Evidence | Result |
 |---|---|---|
 | Type safety | `pnpm check` | Passed after the final application changes. |
-| Unit and router tests | `pnpm test` | Passed: 4 test files and 13 tests. |
+| Unit and router tests | `pnpm test` | Passed: 7 test files and 28 tests. |
 | Exact Truth Talk claim labels | Policy test checks the six approved labels. | Passed. |
 | TruthOK semantics | Policy test checks four discrete states and contains no binary verdict output. | Passed. |
 | Consent receipt | Policy test checks recipient, fields, purpose, and expiry language. | Passed. |
@@ -21,6 +21,12 @@ This record describes the verification completed for the current ROOT build and 
 ## Completed visual checks
 
 The public ROOT gateway was reviewed at desktop and phone-sized viewports. The member identity workspace was also reviewed at desktop and phone-sized viewports. A mobile overflow caused by the horizontally scrollable member navigation was corrected and rechecked. The current interface preserves readable typography, visible action controls, high-contrast buttons, and a mobile horizontal navigation strip for member sections.
+
+## Completed issuer and Monarch checks
+
+On August 11, 2026, the authenticated First Executive session opened the dedicated `/issuer/nodes` route. The live issuer ledger displayed the active **A1 · NEXINUS Business Anchor** for Mendocino County, California, together with the seventeen planned A2–A3, R1–R6, and S1–S9 mandates. The session executed **Mark reviewed** for A1 and received the confirmation message “Monarch node review recorded.” The private audit ledger then displayed a new **Reviewed** event stating that the node mandate and capability manifest had been reviewed.
+
+The application’s current automated suite contains seven test files and twenty-eight passing tests. Its Monarch authorization coverage confirms that only the First Executive can register, review, or suspend a node, and that a service record cannot be assigned to a planned or inactive node.
 
 ## Member acceptance scenarios
 

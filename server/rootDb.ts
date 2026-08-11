@@ -4,6 +4,8 @@ import {
   consentGrants,
   emergencyResources,
   memberProfiles,
+  monarchNodeAudits,
+  monarchNodes,
   operatorAudits,
   operators,
   scopedVouches,
@@ -170,6 +172,71 @@ export async function setOperatorStatus(input: { operatorId: number; status: "ac
   const db = requireDb(await getDb());
   await db.update(operators).set({ status: input.status, suspendedAt: input.status === "suspended" ? new Date() : null }).where(eq(operators.id, input.operatorId));
   await db.insert(operatorAudits).values({ operatorId: input.operatorId, actorUserId: input.actorUserId, action: input.status === "suspended" ? "suspended" : "reactivated", details: `Operator status set to ${input.status}.` });
+}
+
+export type MonarchNodeLayer = "anchor" | "relay" | "signal";
+
+export async function listMonarchNodes() {
+  const db = requireDb(await getDb());
+  return db.select().from(monarchNodes).orderBy(monarchNodes.layer, monarchNodes.nodeCode);
+}
+
+export async function getActiveMonarchNode(nodeId: number) {
+  const db = requireDb(await getDb());
+  const records = await db.select().from(monarchNodes).where(and(eq(monarchNodes.id, nodeId), eq(monarchNodes.status, "active"))).limit(1);
+  return records[0];
+}
+
+export async function listMonarchNodeAudits() {
+  const db = requireDb(await getDb());
+  return db.select().from(monarchNodeAudits).orderBy(desc(monarchNodeAudits.createdAt)).limit(200);
+}
+
+export async function registerMonarchNode(input: {
+  nodeCode: string;
+  nodeLabel: string;
+  layer: MonarchNodeLayer;
+  mandate: string;
+  regionLabel: string | null;
+  capabilityManifest: string[];
+  status: "planned" | "active";
+  operatorUserId: number | null;
+  approvedByUserId: number;
+  reviewDueAt: Date;
+}) {
+  const db = requireDb(await getDb());
+  const existing = await db.select().from(monarchNodes).where(eq(monarchNodes.nodeCode, input.nodeCode)).limit(1);
+  if (existing[0]) throw new Error("This Monarch node code is already registered.");
+  await db.insert(monarchNodes).values({
+    nodeCode: input.nodeCode,
+    nodeLabel: input.nodeLabel,
+    layer: input.layer,
+    mandate: input.mandate,
+    regionLabel: input.regionLabel,
+    capabilityManifestJson: JSON.stringify(input.capabilityManifest),
+    status: input.status,
+    operatorUserId: input.operatorUserId,
+    approvedByUserId: input.approvedByUserId,
+    reviewDueAt: input.reviewDueAt,
+  });
+  const created = await db.select().from(monarchNodes).where(eq(monarchNodes.nodeCode, input.nodeCode)).limit(1);
+  if (!created[0]) throw new Error("Unable to register the Monarch node.");
+  await db.insert(monarchNodeAudits).values({ nodeId: created[0].id, actorUserId: input.approvedByUserId, action: "registered", details: `Registered ${input.status} ${input.layer} node.` });
+  return created[0];
+}
+
+export async function setMonarchNodeStatus(input: { nodeId: number; status: "active" | "suspended"; actorUserId: number }) {
+  const db = requireDb(await getDb());
+  await db.update(monarchNodes).set({ status: input.status, suspendedAt: input.status === "suspended" ? new Date() : null }).where(eq(monarchNodes.id, input.nodeId));
+  await db.insert(monarchNodeAudits).values({ nodeId: input.nodeId, actorUserId: input.actorUserId, action: input.status === "suspended" ? "suspended" : "reactivated", details: `Node status set to ${input.status}.` });
+}
+
+export async function markMonarchNodeReviewed(input: { nodeId: number; actorUserId: number }) {
+  const db = requireDb(await getDb());
+  const reviewDueAt = new Date();
+  reviewDueAt.setMonth(reviewDueAt.getMonth() + 3);
+  await db.update(monarchNodes).set({ reviewDueAt }).where(eq(monarchNodes.id, input.nodeId));
+  await db.insert(monarchNodeAudits).values({ nodeId: input.nodeId, actorUserId: input.actorUserId, action: "reviewed", details: "Node mandate and capability manifest reviewed." });
 }
 
 export async function createAttestation(input: {

@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
+import { MONARCH_NODE_LAYERS } from "../shared/monarch";
 import { canRespondToVouch, canRevokeVouch, CLAIM_TYPE_VALUES, consentReceiptText, EMERGENCY_PRIVACY_NOTICE, emergencyLocationIsPersistent, truthOkSignals } from "../shared/root";
 import {
   approveOperator,
@@ -14,6 +15,7 @@ import {
   exportMemberData,
   findProfileByMemberCode,
   getActiveOperatorForUser,
+  getActiveMonarchNode,
   getOrCreateMemberProfile,
   getScopedVouch,
   getServiceEligibility,
@@ -25,6 +27,8 @@ import {
   listManagedServices,
   listMemberAttestations,
   listMemberVouches,
+  listMonarchNodeAudits,
+  listMonarchNodes,
   listOperators,
   listOperatorAudits,
   listOwnTruthPosts,
@@ -33,12 +37,15 @@ import {
   markDeletionRequested,
   markExportRequested,
   markEmergencyResourceReviewed,
+  markMonarchNodeReviewed,
   markServiceReviewed,
   respondToScopedVouch,
   revokeAttestation,
   revokeConsentGrant,
   revokeScopedVouch,
+  registerMonarchNode,
   setEmergencyResourcePublication,
+  setMonarchNodeStatus,
   setOperatorStatus,
   setServicePublication,
   updateMemberProfile,
@@ -50,6 +57,7 @@ const claimTypeSchema = z.enum(CLAIM_TYPE_VALUES);
 const emergencyTypeSchema = z.enum(["safety", "shelter", "food", "health", "legal", "other"]);
 const governanceRoleSchema = z.enum(["first_executive", "issuer", "directory_steward", "incident_reviewer"]);
 type GovernanceRole = z.infer<typeof governanceRoleSchema>;
+const monarchNodeLayerSchema = z.enum(MONARCH_NODE_LAYERS);
 
 function rootError(message: string, code: "BAD_REQUEST" | "FORBIDDEN" | "NOT_FOUND" = "BAD_REQUEST") {
   return new TRPCError({ code, message });
@@ -238,6 +246,34 @@ export const rootRouter = router({
         await requireOperator(ctx.user.id, ["first_executive"]); await setOperatorStatus({ ...input, actorUserId: ctx.user.id }); return { updated: true };
       }),
     }),
+    nodes: router({
+      list: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive"]); return listMonarchNodes(); }),
+      audit: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive"]); return listMonarchNodeAudits(); }),
+      register: protectedProcedure.input(z.object({
+        nodeCode: z.string().trim().toUpperCase().regex(/^[ARS][1-9]$/),
+        nodeLabel: z.string().trim().min(2).max(140),
+        layer: monarchNodeLayerSchema,
+        mandate: z.string().trim().min(8).max(280),
+        regionLabel: z.string().trim().min(2).max(160).optional(),
+        capabilityManifest: z.array(z.string().trim().min(2).max(120)).min(1).max(12),
+        status: z.enum(["planned", "active"]).default("planned"),
+        operatorMemberCode: z.string().trim().min(10).max(40).optional(),
+      })).mutation(async ({ ctx, input }) => {
+        await requireOperator(ctx.user.id, ["first_executive"]);
+        const expectedLayer = input.nodeCode.startsWith("A") ? "anchor" : input.nodeCode.startsWith("R") ? "relay" : "signal";
+        if (input.layer !== expectedLayer) throw rootError("The node code prefix must match its Monarch layer.");
+        const profile = input.operatorMemberCode ? await findProfileByMemberCode(input.operatorMemberCode) : undefined;
+        if (input.operatorMemberCode && !profile) throw rootError("That node operator member code does not match a ROOT profile.", "NOT_FOUND");
+        const reviewDueAt = new Date(); reviewDueAt.setMonth(reviewDueAt.getMonth() + 3);
+        return registerMonarchNode({ ...input, regionLabel: input.regionLabel ?? null, operatorUserId: profile?.userId ?? null, approvedByUserId: ctx.user.id, reviewDueAt });
+      }),
+      setStatus: protectedProcedure.input(z.object({ nodeId: z.number().int().positive(), status: z.enum(["active", "suspended"]) })).mutation(async ({ ctx, input }) => {
+        await requireOperator(ctx.user.id, ["first_executive"]); await setMonarchNodeStatus({ ...input, actorUserId: ctx.user.id }); return { updated: true };
+      }),
+      markReviewed: protectedProcedure.input(z.object({ nodeId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        await requireOperator(ctx.user.id, ["first_executive"]); await markMonarchNodeReviewed({ nodeId: input.nodeId, actorUserId: ctx.user.id }); return { reviewed: true };
+      }),
+    }),
     attestations: router({
       list: protectedProcedure.query(async ({ ctx }) => {
         const operator = await requireOperator(ctx.user.id, ["first_executive", "issuer", "incident_reviewer"]);
@@ -257,8 +293,10 @@ export const rootRouter = router({
     directories: router({
       services: router({
         list: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); return listManagedServices(); }),
-        create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(140), description: z.string().trim().min(12).max(5000), serviceType: z.string().trim().min(2).max(100), eligibilityRequirement: z.string().trim().min(4).max(240), sourceUrl: z.string().url().max(500), isPublished: z.boolean().default(false) })).mutation(async ({ ctx, input }) => {
-          await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); await createService({ ...input, publishedByUserId: ctx.user.id }); return { created: true };
+        create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(140), description: z.string().trim().min(12).max(5000), serviceType: z.string().trim().min(2).max(100), eligibilityRequirement: z.string().trim().min(4).max(240), sourceUrl: z.string().url().max(500), nodeId: z.number().int().positive().optional(), isPublished: z.boolean().default(false) })).mutation(async ({ ctx, input }) => {
+          await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]);
+          if (input.nodeId && !await getActiveMonarchNode(input.nodeId)) throw rootError("Directory records can be assigned only to an active Monarch node.", "NOT_FOUND");
+          await createService({ ...input, publishedByUserId: ctx.user.id }); return { created: true };
         }),
         setPublication: protectedProcedure.input(z.object({ serviceId: z.number().int().positive(), isPublished: z.boolean() })).mutation(async ({ ctx, input }) => {
           await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); await setServicePublication(input.serviceId, input.isPublished, ctx.user.id); return { updated: true };
@@ -269,9 +307,10 @@ export const rootRouter = router({
       }),
       emergency: router({
         list: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); return listManagedEmergencyResources(); }),
-        create: protectedProcedure.input(z.object({ emergencyType: emergencyTypeSchema, regionLabel: z.string().trim().min(2).max(160), resourceName: z.string().trim().min(2).max(160), contactLabel: z.string().trim().min(2).max(280), contactUrl: z.string().url().max(500).optional(), sourceUrl: z.string().url().max(500), latitude: z.number().min(-90).max(90).optional(), longitude: z.number().min(-180).max(180).optional(), isPublished: z.boolean().default(false) })).mutation(async ({ ctx, input }) => {
+        create: protectedProcedure.input(z.object({ emergencyType: emergencyTypeSchema, regionLabel: z.string().trim().min(2).max(160), resourceName: z.string().trim().min(2).max(160), contactLabel: z.string().trim().min(2).max(280), contactUrl: z.string().url().max(500).optional(), sourceUrl: z.string().url().max(500), latitude: z.number().min(-90).max(90).optional(), longitude: z.number().min(-180).max(180).optional(), nodeId: z.number().int().positive().optional(), isPublished: z.boolean().default(false) })).mutation(async ({ ctx, input }) => {
           await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]);
           if ((input.latitude === undefined) !== (input.longitude === undefined)) throw rootError("Provide both directory coordinates or neither.");
+          if (input.nodeId && !await getActiveMonarchNode(input.nodeId)) throw rootError("Directory records can be assigned only to an active Monarch node.", "NOT_FOUND");
           await createEmergencyResource({ ...input, contactUrl: input.contactUrl ?? null, latitude: input.latitude?.toString() ?? null, longitude: input.longitude?.toString() ?? null, publishedByUserId: ctx.user.id }); return { created: true };
         }),
         setPublication: protectedProcedure.input(z.object({ resourceId: z.number().int().positive(), isPublished: z.boolean() })).mutation(async ({ ctx, input }) => {

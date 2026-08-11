@@ -15,6 +15,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/app"} component={MemberWorkspace} />
       <Route path={"/issuer"} component={IssuerWorkspace} />
+      <Route path={"/issuer/nodes"} component={IssuerWorkspace} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
