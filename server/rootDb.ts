@@ -4,6 +4,8 @@ import {
   consentGrants,
   emergencyResources,
   memberProfiles,
+  operatorAudits,
+  operators,
   scopedVouches,
   services,
   truthPosts,
@@ -101,6 +103,73 @@ export async function listMemberAttestations(userId: number) {
 export async function listIssuedAttestations() {
   const db = requireDb(await getDb());
   return db.select().from(attestations).orderBy(desc(attestations.issuedAt)).limit(100);
+}
+
+export async function listIssuedAttestationsForOperator(issuedByUserId: number) {
+  const db = requireDb(await getDb());
+  return db.select().from(attestations).where(eq(attestations.issuedByUserId, issuedByUserId)).orderBy(desc(attestations.issuedAt)).limit(100);
+}
+
+export type GovernanceRole = "first_executive" | "issuer" | "directory_steward" | "incident_reviewer";
+
+export async function getActiveOperatorForUser(userId: number) {
+  const db = requireDb(await getDb());
+  const records = await db.select().from(operators).where(and(eq(operators.userId, userId), eq(operators.status, "active"))).limit(1);
+  return records[0];
+}
+
+export async function bootstrapFirstExecutive(input: { userId: number; operatorLabel: string }) {
+  const db = requireDb(await getDb());
+  const existing = await db.select().from(operators).where(eq(operators.userId, input.userId)).limit(1);
+  if (existing[0]) return existing[0];
+  const reviewDueAt = new Date();
+  reviewDueAt.setMonth(reviewDueAt.getMonth() + 3);
+  await db.insert(operators).values({
+    userId: input.userId,
+    operatorLabel: input.operatorLabel,
+    governanceRole: "first_executive",
+    status: "active",
+    approvedByUserId: input.userId,
+    conflictDisclosureConfirmed: true,
+    reviewDueAt,
+  });
+  const created = await db.select().from(operators).where(eq(operators.userId, input.userId)).limit(1);
+  if (!created[0]) throw new Error("Unable to create the First Executive roster record.");
+  await db.insert(operatorAudits).values({ operatorId: created[0].id, actorUserId: input.userId, action: "approved", details: "Initial First Executive roster bootstrap." });
+  return created[0];
+}
+
+export async function listOperators() {
+  const db = requireDb(await getDb());
+  return db.select().from(operators).orderBy(desc(operators.approvedAt));
+}
+
+export async function listOperatorAudits() {
+  const db = requireDb(await getDb());
+  return db.select().from(operatorAudits).orderBy(desc(operatorAudits.createdAt)).limit(200);
+}
+
+export async function approveOperator(input: {
+  userId: number;
+  operatorLabel: string;
+  governanceRole: GovernanceRole;
+  approvedByUserId: number;
+  reviewDueAt: Date;
+}) {
+  const db = requireDb(await getDb());
+  const existing = await db.select().from(operators).where(eq(operators.userId, input.userId)).limit(1);
+  if (existing[0]) throw new Error("This member already has an operator roster record.");
+  await db.insert(operators).values({ ...input, status: "active", conflictDisclosureConfirmed: true });
+  const created = await db.select().from(operators).where(eq(operators.userId, input.userId)).limit(1);
+  if (!created[0]) throw new Error("Unable to approve the operator.");
+  await db.insert(operatorAudits).values({ operatorId: created[0].id, actorUserId: input.approvedByUserId, action: "approved", details: `Approved as ${input.governanceRole}.` });
+  return created[0];
+}
+
+export async function setOperatorStatus(input: { operatorId: number; status: "active" | "suspended"; actorUserId: number }) {
+  const db = requireDb(await getDb());
+  await db.update(operators).set({ status: input.status, suspendedAt: input.status === "suspended" ? new Date() : null }).where(eq(operators.id, input.operatorId));
+  await db.insert(operatorAudits).values({ operatorId: input.operatorId, actorUserId: input.actorUserId, action: input.status === "suspended" ? "suspended" : "reactivated", details: `Operator status set to ${input.status}.` });
 }
 
 export async function createAttestation(input: {
@@ -225,14 +294,29 @@ export async function createService(input: {
   eligibilityRequirement: string;
   sourceUrl: string;
   isPublished: boolean;
+  publishedByUserId: number;
 }) {
   const db = requireDb(await getDb());
-  await db.insert(services).values(input);
+  const now = new Date();
+  const reviewDueAt = new Date(now);
+  reviewDueAt.setMonth(reviewDueAt.getMonth() + 3);
+  await db.insert(services).values({ ...input, verifiedAt: now, reviewDueAt, publishedAt: input.isPublished ? now : null, publishedByUserId: input.isPublished ? input.publishedByUserId : null });
 }
 
-export async function setServicePublication(serviceId: number, isPublished: boolean) {
+export async function setServicePublication(serviceId: number, isPublished: boolean, actorUserId: number) {
   const db = requireDb(await getDb());
-  await db.update(services).set({ isPublished }).where(eq(services.id, serviceId));
+  const now = new Date();
+  const reviewDueAt = new Date(now);
+  reviewDueAt.setMonth(reviewDueAt.getMonth() + 3);
+  await db.update(services).set({ isPublished, publishedAt: isPublished ? now : null, publishedByUserId: isPublished ? actorUserId : null, reviewDueAt: isPublished ? reviewDueAt : null }).where(eq(services.id, serviceId));
+}
+
+export async function markServiceReviewed(serviceId: number) {
+  const db = requireDb(await getDb());
+  const now = new Date();
+  const reviewDueAt = new Date(now);
+  reviewDueAt.setMonth(reviewDueAt.getMonth() + 3);
+  await db.update(services).set({ verifiedAt: now, reviewDueAt }).where(eq(services.id, serviceId));
 }
 
 export async function getServiceEligibility(userId: number, serviceId: number) {
@@ -304,14 +388,29 @@ export async function createEmergencyResource(input: {
   latitude: string | null;
   longitude: string | null;
   isPublished: boolean;
+  publishedByUserId: number;
 }) {
   const db = requireDb(await getDb());
-  await db.insert(emergencyResources).values({ ...input, verifiedAt: new Date() });
+  const now = new Date();
+  const reviewDueAt = new Date(now);
+  reviewDueAt.setMonth(reviewDueAt.getMonth() + 1);
+  await db.insert(emergencyResources).values({ ...input, verifiedAt: now, reviewDueAt, publishedAt: input.isPublished ? now : null, publishedByUserId: input.isPublished ? input.publishedByUserId : null });
 }
 
-export async function setEmergencyResourcePublication(resourceId: number, isPublished: boolean) {
+export async function setEmergencyResourcePublication(resourceId: number, isPublished: boolean, actorUserId: number) {
   const db = requireDb(await getDb());
-  await db.update(emergencyResources).set({ isPublished }).where(eq(emergencyResources.id, resourceId));
+  const now = new Date();
+  const reviewDueAt = new Date(now);
+  reviewDueAt.setMonth(reviewDueAt.getMonth() + 1);
+  await db.update(emergencyResources).set({ isPublished, publishedAt: isPublished ? now : null, publishedByUserId: isPublished ? actorUserId : null, reviewDueAt: isPublished ? reviewDueAt : null }).where(eq(emergencyResources.id, resourceId));
+}
+
+export async function markEmergencyResourceReviewed(resourceId: number) {
+  const db = requireDb(await getDb());
+  const now = new Date();
+  const reviewDueAt = new Date(now);
+  reviewDueAt.setMonth(reviewDueAt.getMonth() + 1);
+  await db.update(emergencyResources).set({ verifiedAt: now, reviewDueAt }).where(eq(emergencyResources.id, resourceId));
 }
 
 export async function exportMemberData(userId: number) {

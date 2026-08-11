@@ -118,6 +118,10 @@ export const services = mysqlTable("services", {
   serviceType: varchar("serviceType", { length: 100 }).notNull(),
   eligibilityRequirement: varchar("eligibilityRequirement", { length: 240 }).notNull(),
   sourceUrl: varchar("sourceUrl", { length: 500 }).notNull(),
+  verifiedAt: timestamp("verifiedAt"),
+  reviewDueAt: timestamp("reviewDueAt"),
+  publishedAt: timestamp("publishedAt"),
+  publishedByUserId: int("publishedByUserId").references(() => users.id),
   isPublished: boolean("isPublished").notNull().default(false),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => ({
@@ -135,8 +139,39 @@ export const emergencyResources = mysqlTable("emergency_resources", {
   latitude: varchar("latitude", { length: 32 }),
   longitude: varchar("longitude", { length: 32 }),
   verifiedAt: timestamp("verifiedAt"),
+  reviewDueAt: timestamp("reviewDueAt"),
+  publishedAt: timestamp("publishedAt"),
+  publishedByUserId: int("publishedByUserId").references(() => users.id),
   isPublished: boolean("isPublished").notNull().default(false),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => ({
   emergencyTypeIdx: index("emergency_resources_type_idx").on(table.emergencyType, table.isPublished),
+}));
+
+export const operators = mysqlTable("operators", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique().references(() => users.id),
+  operatorLabel: varchar("operatorLabel", { length: 120 }).notNull(),
+  governanceRole: mysqlEnum("governanceRole", ["first_executive", "issuer", "directory_steward", "incident_reviewer"]).notNull(),
+  status: mysqlEnum("status", ["active", "suspended"]).notNull().default("active"),
+  approvedByUserId: int("approvedByUserId").notNull().references(() => users.id),
+  approvedAt: timestamp("approvedAt").defaultNow().notNull(),
+  conflictDisclosureConfirmed: boolean("conflictDisclosureConfirmed").notNull().default(false),
+  reviewDueAt: timestamp("reviewDueAt"),
+  suspendedAt: timestamp("suspendedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  activeRoleIdx: index("operators_active_role_idx").on(table.status, table.governanceRole),
+}));
+
+export const operatorAudits = mysqlTable("operator_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  operatorId: int("operatorId").notNull().references(() => operators.id),
+  actorUserId: int("actorUserId").notNull().references(() => users.id),
+  action: mysqlEnum("action", ["approved", "role_updated", "suspended", "reactivated", "reviewed"]).notNull(),
+  details: varchar("details", { length: 500 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  operatorAuditIdx: index("operator_audits_operator_idx").on(table.operatorId, table.createdAt),
 }));

@@ -31,3 +31,12 @@
 - [x] Add and run automated authorization coverage for issuer and directory-management workflows.
 - [x] Expand issuer authorization tests to cover all list, revoke, create, and publication-management routes for admin and non-admin callers.
 - [x] Add the remaining issuer-create authorization tests for non-admin attestation denial and administrator service or emergency creation success.
+- [x] Define and publish the ROOT issuer approval policy, evidence standard, conflict-of-interest rule, and revocation process.
+- [x] Add an admin-only operator roster with least-privilege roles, active or suspended status, approval date, and audit trail.
+- [x] Research and validate official public sources for the first real ROOT service and emergency directory records.
+- [ ] Re-save and verify the initial source-verified service and emergency records through the signed-in Issuer Workspace, including publication dates and review cadence.
+- [x] Create a launch-readiness checklist covering directory review, operator review, member acceptance, and incident escalation.
+- [x] Add and run tests for operator-roster authorization and verified-directory records.
+- [ ] Complete the live authenticated Issuer Workspace acceptance pass with the First Executive account, including roster, review, and publication controls.
+- [x] Document the Cloudflare-blocked administrator sign-in and retain the live authenticated issuer acceptance pass as a post-blocker follow-up.
+- [x] Complete substitute non-browser verification of First Executive authority, published directory records, review cadence, and route-level protections.

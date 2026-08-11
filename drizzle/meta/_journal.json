@@ -22,6 +22,20 @@
       "when": 1786468734094,
       "tag": "0002_fair_xorn",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1786470693257,
+      "tag": "0003_melted_payback",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1786471339470,
+      "tag": "0004_legal_satana",
+      "breakpoints": true
     }
   ]
 }

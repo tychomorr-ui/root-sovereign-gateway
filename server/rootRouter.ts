@@ -3,6 +3,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { canRespondToVouch, canRevokeVouch, CLAIM_TYPE_VALUES, consentReceiptText, EMERGENCY_PRIVACY_NOTICE, emergencyLocationIsPersistent, truthOkSignals } from "../shared/root";
 import {
+  approveOperator,
+  bootstrapFirstExecutive,
   createAttestation,
   createConsentGrant,
   createEmergencyResource,
@@ -11,26 +13,33 @@ import {
   createTruthPost,
   exportMemberData,
   findProfileByMemberCode,
+  getActiveOperatorForUser,
   getOrCreateMemberProfile,
   getScopedVouch,
   getServiceEligibility,
   listConsentGrants,
   listEmergencyResources,
   listIssuedAttestations,
+  listIssuedAttestationsForOperator,
   listManagedEmergencyResources,
   listManagedServices,
   listMemberAttestations,
   listMemberVouches,
+  listOperators,
+  listOperatorAudits,
   listOwnTruthPosts,
   listPublicTruthPosts,
   listPublishedServices,
   markDeletionRequested,
   markExportRequested,
+  markEmergencyResourceReviewed,
+  markServiceReviewed,
   respondToScopedVouch,
   revokeAttestation,
   revokeConsentGrant,
   revokeScopedVouch,
   setEmergencyResourcePublication,
+  setOperatorStatus,
   setServicePublication,
   updateMemberProfile,
   withdrawTruthPost,
@@ -39,9 +48,19 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_
 
 const claimTypeSchema = z.enum(CLAIM_TYPE_VALUES);
 const emergencyTypeSchema = z.enum(["safety", "shelter", "food", "health", "legal", "other"]);
+const governanceRoleSchema = z.enum(["first_executive", "issuer", "directory_steward", "incident_reviewer"]);
+type GovernanceRole = z.infer<typeof governanceRoleSchema>;
 
 function rootError(message: string, code: "BAD_REQUEST" | "FORBIDDEN" | "NOT_FOUND" = "BAD_REQUEST") {
   return new TRPCError({ code, message });
+}
+
+async function requireOperator(userId: number, allowedRoles: GovernanceRole[]) {
+  const operator = await getActiveOperatorForUser(userId);
+  if (!operator || !allowedRoles.includes(operator.governanceRole)) {
+    throw rootError("Your active ROOT operator role does not permit this action.", "FORBIDDEN");
+  }
+  return operator;
 }
 
 export const rootRouter = router({
@@ -204,64 +223,62 @@ export const rootRouter = router({
   }),
 
   issuer: router({
+    operators: router({
+      bootstrap: adminProcedure.mutation(({ ctx }) => bootstrapFirstExecutive({ userId: ctx.user.id, operatorLabel: ctx.user.name || "First Executive" })),
+      list: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive"]); return listOperators(); }),
+      audit: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive"]); return listOperatorAudits(); }),
+      approve: protectedProcedure.input(z.object({ recipientMemberCode: z.string().trim().min(10).max(40), operatorLabel: z.string().trim().min(2).max(120), governanceRole: governanceRoleSchema })).mutation(async ({ ctx, input }) => {
+        await requireOperator(ctx.user.id, ["first_executive"]);
+        const recipient = await findProfileByMemberCode(input.recipientMemberCode);
+        if (!recipient) throw rootError("That member code does not match a ROOT profile.", "NOT_FOUND");
+        const reviewDueAt = new Date(); reviewDueAt.setMonth(reviewDueAt.getMonth() + 3);
+        return approveOperator({ userId: recipient.userId, operatorLabel: input.operatorLabel, governanceRole: input.governanceRole, approvedByUserId: ctx.user.id, reviewDueAt });
+      }),
+      setStatus: protectedProcedure.input(z.object({ operatorId: z.number().int().positive(), status: z.enum(["active", "suspended"]) })).mutation(async ({ ctx, input }) => {
+        await requireOperator(ctx.user.id, ["first_executive"]); await setOperatorStatus({ ...input, actorUserId: ctx.user.id }); return { updated: true };
+      }),
+    }),
     attestations: router({
-      list: adminProcedure.query(() => listIssuedAttestations()),
-      create: adminProcedure.input(z.object({
-        recipientMemberCode: z.string().trim().min(10).max(40),
-        issuerLabel: z.string().trim().min(2).max(140),
-        issuerKind: z.string().trim().min(2).max(80),
-        scope: z.string().trim().min(4).max(180),
-        evidenceStatus: z.enum(["not-provided", "declared", "verified", "disputed"]),
-      })).mutation(async ({ ctx, input }) => {
+      list: protectedProcedure.query(async ({ ctx }) => {
+        const operator = await requireOperator(ctx.user.id, ["first_executive", "issuer", "incident_reviewer"]);
+        return operator.governanceRole === "first_executive" ? listIssuedAttestations() : listIssuedAttestationsForOperator(ctx.user.id);
+      }),
+      create: protectedProcedure.input(z.object({ recipientMemberCode: z.string().trim().min(10).max(40), issuerLabel: z.string().trim().min(2).max(140), issuerKind: z.string().trim().min(2).max(80), scope: z.string().trim().min(4).max(180), evidenceStatus: z.enum(["not-provided", "declared", "verified", "disputed"]) })).mutation(async ({ ctx, input }) => {
+        await requireOperator(ctx.user.id, ["first_executive", "issuer"]);
         const recipient = await findProfileByMemberCode(input.recipientMemberCode);
         if (!recipient) throw rootError("That member code does not match a ROOT profile.", "NOT_FOUND");
         await createAttestation({ subjectUserId: recipient.userId, issuedByUserId: ctx.user.id, issuerLabel: input.issuerLabel, issuerKind: input.issuerKind, scope: input.scope, evidenceStatus: input.evidenceStatus });
         return { created: true };
       }),
-      revoke: adminProcedure.input(z.object({ attestationId: z.number().int().positive() })).mutation(async ({ input }) => {
-        await revokeAttestation(input.attestationId);
-        return { revoked: true };
+      revoke: protectedProcedure.input(z.object({ attestationId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        await requireOperator(ctx.user.id, ["first_executive", "incident_reviewer"]); await revokeAttestation(input.attestationId); return { revoked: true };
       }),
     }),
     directories: router({
       services: router({
-        list: adminProcedure.query(() => listManagedServices()),
-        create: adminProcedure.input(z.object({
-          name: z.string().trim().min(2).max(140),
-          description: z.string().trim().min(12).max(5000),
-          serviceType: z.string().trim().min(2).max(100),
-          eligibilityRequirement: z.string().trim().min(4).max(240),
-          sourceUrl: z.string().url().max(500),
-          isPublished: z.boolean().default(false),
-        })).mutation(async ({ input }) => {
-          await createService(input);
-          return { created: true };
+        list: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); return listManagedServices(); }),
+        create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(140), description: z.string().trim().min(12).max(5000), serviceType: z.string().trim().min(2).max(100), eligibilityRequirement: z.string().trim().min(4).max(240), sourceUrl: z.string().url().max(500), isPublished: z.boolean().default(false) })).mutation(async ({ ctx, input }) => {
+          await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); await createService({ ...input, publishedByUserId: ctx.user.id }); return { created: true };
         }),
-        setPublication: adminProcedure.input(z.object({ serviceId: z.number().int().positive(), isPublished: z.boolean() })).mutation(async ({ input }) => {
-          await setServicePublication(input.serviceId, input.isPublished);
-          return { updated: true };
+        setPublication: protectedProcedure.input(z.object({ serviceId: z.number().int().positive(), isPublished: z.boolean() })).mutation(async ({ ctx, input }) => {
+          await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); await setServicePublication(input.serviceId, input.isPublished, ctx.user.id); return { updated: true };
+        }),
+        markReviewed: protectedProcedure.input(z.object({ serviceId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); await markServiceReviewed(input.serviceId); return { reviewed: true };
         }),
       }),
       emergency: router({
-        list: adminProcedure.query(() => listManagedEmergencyResources()),
-        create: adminProcedure.input(z.object({
-          emergencyType: emergencyTypeSchema,
-          regionLabel: z.string().trim().min(2).max(160),
-          resourceName: z.string().trim().min(2).max(160),
-          contactLabel: z.string().trim().min(2).max(280),
-          contactUrl: z.string().url().max(500).optional(),
-          sourceUrl: z.string().url().max(500),
-          latitude: z.number().min(-90).max(90).optional(),
-          longitude: z.number().min(-180).max(180).optional(),
-          isPublished: z.boolean().default(false),
-        })).mutation(async ({ input }) => {
+        list: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); return listManagedEmergencyResources(); }),
+        create: protectedProcedure.input(z.object({ emergencyType: emergencyTypeSchema, regionLabel: z.string().trim().min(2).max(160), resourceName: z.string().trim().min(2).max(160), contactLabel: z.string().trim().min(2).max(280), contactUrl: z.string().url().max(500).optional(), sourceUrl: z.string().url().max(500), latitude: z.number().min(-90).max(90).optional(), longitude: z.number().min(-180).max(180).optional(), isPublished: z.boolean().default(false) })).mutation(async ({ ctx, input }) => {
+          await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]);
           if ((input.latitude === undefined) !== (input.longitude === undefined)) throw rootError("Provide both directory coordinates or neither.");
-          await createEmergencyResource({ ...input, contactUrl: input.contactUrl ?? null, latitude: input.latitude?.toString() ?? null, longitude: input.longitude?.toString() ?? null });
-          return { created: true };
+          await createEmergencyResource({ ...input, contactUrl: input.contactUrl ?? null, latitude: input.latitude?.toString() ?? null, longitude: input.longitude?.toString() ?? null, publishedByUserId: ctx.user.id }); return { created: true };
         }),
-        setPublication: adminProcedure.input(z.object({ resourceId: z.number().int().positive(), isPublished: z.boolean() })).mutation(async ({ input }) => {
-          await setEmergencyResourcePublication(input.resourceId, input.isPublished);
-          return { updated: true };
+        setPublication: protectedProcedure.input(z.object({ resourceId: z.number().int().positive(), isPublished: z.boolean() })).mutation(async ({ ctx, input }) => {
+          await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); await setEmergencyResourcePublication(input.resourceId, input.isPublished, ctx.user.id); return { updated: true };
+        }),
+        markReviewed: protectedProcedure.input(z.object({ resourceId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); await markEmergencyResourceReviewed(input.resourceId); return { reviewed: true };
         }),
       }),
     }),
