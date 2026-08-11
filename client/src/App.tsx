@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import IssuerWorkspace from "./pages/IssuerWorkspace";
 import MemberWorkspace from "./pages/MemberWorkspace";
+import ProjectReclaim from "./pages/ProjectReclaim";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -14,6 +15,7 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/app"} component={MemberWorkspace} />
+      <Route path={"/reclaim"} component={ProjectReclaim} />
       <Route path={"/issuer"} component={IssuerWorkspace} />
       <Route path={"/issuer/nodes"} component={IssuerWorkspace} />
       <Route path={"/404"} component={NotFound} />

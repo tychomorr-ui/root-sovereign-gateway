@@ -3,17 +3,18 @@ import { startLogin } from "@/const";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { CLAIM_TYPES, deriveFileIntegrityDigest, EMERGENCY_PRIVACY_NOTICE, TRUTH_OK_SIGNAL_LABELS } from "@shared/root";
-import { ChevronRight, CircleAlert, ClipboardCheck, Download, FileKey2, HeartHandshake, KeyRound, Loader2, MapPinned, Plus, ShieldCheck, UserRoundCheck, X } from "lucide-react";
+import { ChevronRight, CircleAlert, ClipboardCheck, Download, FileKey2, HeartHandshake, KeyRound, Loader2, LockKeyhole, MapPinned, Plus, ShieldCheck, Sprout, UserRoundCheck, X } from "lucide-react";
 import { ChangeEvent, FormEvent, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 
-type WorkspaceSection = "profile" | "permissions" | "record" | "talk" | "vouches" | "services" | "emergency";
+type WorkspaceSection = "profile" | "permissions" | "record" | "reclaim" | "talk" | "vouches" | "services" | "emergency";
 
 const NAV: Array<{ id: WorkspaceSection; label: string; icon: typeof UserRoundCheck }> = [
   { id: "profile", label: "Identity", icon: UserRoundCheck },
   { id: "permissions", label: "Permissions", icon: KeyRound },
   { id: "record", label: "Member record", icon: ClipboardCheck },
+  { id: "reclaim", label: "Project Reclaim", icon: Sprout },
   { id: "talk", label: "Truth Talk", icon: FileKey2 },
   { id: "vouches", label: "Scoped vouches", icon: HeartHandshake },
   { id: "services", label: "Services", icon: ShieldCheck },
@@ -81,6 +82,7 @@ export default function MemberWorkspace() {
           {active === "profile" && <ProfilePanel />}
           {active === "permissions" && <PermissionsPanel />}
           {active === "record" && <RecordPanel />}
+          {active === "reclaim" && <ProjectReclaimMemberPanel />}
           {active === "talk" && <TruthTalkPanel />}
           {active === "vouches" && <VouchesPanel />}
           {active === "services" && <ServicesPanel />}
@@ -150,6 +152,24 @@ function RecordPanel() {
     <SectionHeading eyebrow="PRIVATE MEMBER RECORD" title="Issued proofs, plainly presented.">This record is only visible to you. It collects issued attestations, scoped vouches, evidence status, revocation state, and disputes without turning you into a public score.</SectionHeading>
     {record.isLoading ? <PanelLoading /> : <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]"><section className="panel overflow-hidden"><div className="border-b border-[#dfe4dc] p-6"><h2 className="font-serif text-2xl">Attestations</h2></div>{record.data?.attestations.length ? <div className="divide-y divide-[#dfe4dc]">{record.data.attestations.map(item => <div className="p-5" key={item.id}><div className="flex items-start justify-between gap-4"><div><p className="font-medium">{item.scope}</p><p className="mt-1 text-xs text-[#687168]">Issued by {item.issuerLabel} · {item.issuerKind}</p></div><span className="rounded-full bg-[#edf0ea] px-2.5 py-1 text-xs font-semibold text-[#586657]">{item.status}</span></div><div className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><span className="text-[#738072]">Evidence</span><p className="mt-1 font-medium">{item.evidenceStatus}</p></div><div><span className="text-[#738072]">Issued</span><p className="mt-1 font-medium">{formatDate(item.issuedAt)}</p></div></div>{item.disputeSummary && <p className="mt-4 rounded-lg bg-[#fff8e9] p-3 text-xs text-[#765a20]">Dispute: {item.disputeSummary}</p>}</div>)}</div> : <EmptyState icon={<ClipboardCheck />} title="No issued attestations" body="When an authorized issuer records an attestation for you, its scope, issuer, evidence status, and any dispute history will appear here." />}</section>
       <section className="panel overflow-hidden"><div className="border-b border-[#dfe4dc] p-6"><h2 className="font-serif text-2xl">Scoped vouches</h2></div>{record.data?.vouches.length ? <div className="divide-y divide-[#dfe4dc]">{record.data.vouches.map(item => <div className="p-5" key={item.id}><p className="font-medium">{item.scope}</p><p className="mt-1 text-xs text-[#687168]">{item.status} · {formatDate(item.createdAt)}</p></div>)}</div> : <EmptyState icon={<HeartHandshake />} title="No scoped vouches" body="Vouches are limited to a stated scope and require your acceptance. They never become a universal personal score." />}</section></div>}
+  </>;
+}
+
+function ProjectReclaimMemberPanel() {
+  const utils = trpc.useUtils();
+  const sources = trpc.root.projectReclaim.sources.useQuery();
+  const interests = trpc.root.projectReclaim.interests.mine.useQuery();
+  const [selectedSourceId, setSelectedSourceId] = useState<number | null>(null);
+  const [privateNote, setPrivateNote] = useState("");
+  const saveInterest = trpc.root.projectReclaim.interests.save.useMutation({ onSuccess: () => { utils.root.projectReclaim.interests.mine.invalidate(); setSelectedSourceId(null); setPrivateNote(""); toast.success("Your Project Reclaim interest stayed private in your ROOT record."); } });
+  const selectedSource = sources.data?.find(source => source.id === selectedSourceId);
+
+  return <>
+    <SectionHeading eyebrow="PROJECT RECLAIM" title="Explore a pathway without giving yourself away.">Project Reclaim organizes reviewed public sources across Health, Housing, Work, Education, Community, and Independence. Your interest and notes remain private unless you later issue a specific consent grant.</SectionHeading>
+    <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
+      <section className="panel overflow-hidden"><div className="border-b border-[#dfe4dc] p-6"><p className="text-xs font-bold tracking-[.12em] text-[#617960]">REVIEWED PUBLIC SOURCES</p><h2 className="mt-3 font-serif text-2xl">Choose your next step privately.</h2><p className="mt-2 text-sm leading-6 text-[#647064]">ROOT is not an employer, provider, benefits office, or placement service. Open the named source for current details and decisions.</p></div>{sources.isLoading ? <PanelLoading /> : sources.data?.length ? <div className="divide-y divide-[#dfe4dc]">{sources.data.map(source => <article key={source.id} className="p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[.14em] text-[#5f755c]">{source.county} · {source.pillar}</p><h3 className="mt-2 font-serif text-xl">{source.title}</h3></div><span className="rounded-full bg-[#eef4e6] px-3 py-1 text-xs font-semibold text-[#55712e]">reviewed source</span></div><p className="mt-3 text-sm leading-6 text-[#536152]">{source.description}</p><p className="mt-4 rounded-lg bg-[#f1f3ee] p-3 text-xs leading-5 text-[#687468]">Current note: {source.availabilityNote}</p><div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold"><a href={source.sourceUrl} target="_blank" rel="noreferrer" className="text-[#507622] hover:underline">Open official source</a><button onClick={() => { setSelectedSourceId(source.id); setPrivateNote(""); }} className="text-[#425b40] hover:underline">Save private interest</button></div></article>)}</div> : <EmptyState icon={<Sprout />} title="Sources are under review" body="ROOT will publish Project Reclaim pathways only after a named primary source and an active regional review boundary are in place." />}</section>
+      <section className="panel overflow-hidden"><div className="border-b border-[#dfe4dc] p-6"><p className="text-xs font-bold tracking-[.12em] text-[#617960]">YOUR PRIVATE LEDGER</p><h2 className="mt-3 font-serif text-2xl">Interest is not a referral.</h2><p className="mt-2 text-sm leading-6 text-[#647064]">These notes belong to you. ROOT does not forward them to a provider, employer, county agency, or anyone else.</p></div>{selectedSource ? <form onSubmit={event => { event.preventDefault(); saveInterest.mutate({ sourceId: selectedSource.id, privateNote: privateNote.trim() || undefined }); }} className="border-b border-[#dfe4dc] p-6"><p className="font-semibold">{selectedSource.title}</p><label className="field-label mt-5" htmlFor="reclaim-private-note">Private note (optional)</label><textarea id="reclaim-private-note" value={privateNote} onChange={event => setPrivateNote(event.target.value)} maxLength={1000} className="field-input mt-2 min-h-28 resize-y" placeholder="What would you like to remember or explore? This is visible only to you." /><div className="mt-4 flex gap-3"><Button type="submit" disabled={saveInterest.isPending} className="rounded-xl bg-[#18211c] text-white hover:bg-[#25362a]">Save privately</Button><Button type="button" variant="outline" onClick={() => setSelectedSourceId(null)} className="rounded-xl border-[#cfd6ca] bg-white">Cancel</Button></div></form> : null}{interests.isLoading ? <PanelLoading /> : interests.data?.length ? <div className="divide-y divide-[#dfe4dc]">{interests.data.map(({ interest, source }) => <article key={interest.id} className="p-5"><p className="font-medium">{source.title}</p><p className="mt-1 text-xs capitalize text-[#687468]">{source.county} · {source.pillar}</p>{interest.privateNote && <p className="mt-3 rounded-lg bg-[#f1f3ee] p-3 text-sm leading-6 text-[#536152]">{interest.privateNote}</p>}<p className="mt-3 text-xs text-[#798479]">Saved {formatDate(interest.updatedAt)}</p></article>)}</div> : <EmptyState icon={<LockKeyhole />} title="No private interests yet" body="Choose a reviewed source and save a private note when you want to revisit it. Nothing is shared from this ledger." />}</section>
+    </div>
   </>;
 }
 

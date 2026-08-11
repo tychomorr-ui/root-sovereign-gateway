@@ -11,6 +11,7 @@ import {
   createEmergencyResource,
   createOperatorIntake,
   createPersonalIdentity,
+  createProjectReclaimSource,
   createScopedVouch,
   createService,
   createTruthPost,
@@ -21,6 +22,7 @@ import {
   getActiveMonarchNode,
   getOrCreateMemberProfile,
   getPersonalIdentity,
+  getProjectReclaimSource,
   getScopedVouch,
   getServiceEligibility,
   listConsentGrants,
@@ -29,6 +31,7 @@ import {
   listIssuedAttestationsForOperator,
   listManagedEmergencyResources,
   listManagedServices,
+  listManagedProjectReclaimSources,
   listMemberAttestations,
   listMemberVouches,
   listMonarchNodeAudits,
@@ -38,12 +41,16 @@ import {
   listOperatorIntakeAudits,
   listOperatorIntakes,
   listOwnTruthPosts,
+  listOwnProjectReclaimInterests,
+  listProjectReclaimAudits,
   listPublicTruthPosts,
+  listPublishedProjectReclaimSources,
   listPublishedServices,
   markDeletionRequested,
   markExportRequested,
   markEmergencyResourceReviewed,
   markMonarchNodeReviewed,
+  markProjectReclaimSourceReviewed,
   markServiceReviewed,
   respondToScopedVouch,
   recordOperatorIntakeAudit,
@@ -55,7 +62,9 @@ import {
   setEmergencyResourcePublication,
   setMonarchNodeStatus,
   setOperatorStatus,
+  setProjectReclaimSourceStatus,
   setServicePublication,
+  saveProjectReclaimInterest,
   updateMemberProfile,
   withdrawTruthPost,
 } from "./rootDb";
@@ -67,6 +76,9 @@ const governanceRoleSchema = z.enum(["first_executive", "issuer", "directory_ste
 type GovernanceRole = z.infer<typeof governanceRoleSchema>;
 const requestedOperatorRoleSchema = z.enum(["issuer", "directory_steward", "incident_reviewer"]);
 const monarchNodeLayerSchema = z.enum(MONARCH_NODE_LAYERS);
+const projectReclaimPillarSchema = z.enum(["health", "housing", "work", "education", "community", "independence"]);
+const projectReclaimCountySchema = z.enum(["mendocino", "lake"]);
+const projectReclaimSourceKindSchema = z.enum(["resource", "opportunity"]);
 
 function rootError(message: string, code: "BAD_REQUEST" | "FORBIDDEN" | "NOT_FOUND" = "BAD_REQUEST") {
   return new TRPCError({ code, message });
@@ -131,6 +143,18 @@ export const rootRouter = router({
         listMemberVouches(ctx.user.id),
       ]);
       return { profile, attestations: memberAttestations, vouches };
+    }),
+  }),
+
+  projectReclaim: router({
+    sources: publicProcedure.query(() => listPublishedProjectReclaimSources()),
+    interests: router({
+      mine: protectedProcedure.query(({ ctx }) => listOwnProjectReclaimInterests(ctx.user.id)),
+      save: protectedProcedure.input(z.object({ sourceId: z.number().int().positive(), privateNote: z.string().trim().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+        const source = await getProjectReclaimSource(input.sourceId);
+        if (!source || source.status !== "published") throw rootError("You can save interest only for a currently published Project Reclaim source.", "NOT_FOUND");
+        return saveProjectReclaimInterest({ ownerUserId: ctx.user.id, sourceId: input.sourceId, privateNote: input.privateNote || null });
+      }),
     }),
   }),
 
@@ -344,6 +368,47 @@ export const rootRouter = router({
       }),
       revoke: protectedProcedure.input(z.object({ attestationId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
         await requireOperator(ctx.user.id, ["first_executive", "incident_reviewer"]); await revokeAttestation(input.attestationId); return { revoked: true };
+      }),
+    }),
+    projectReclaim: router({
+      list: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]); return listManagedProjectReclaimSources(); }),
+      audit: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive"]); return listProjectReclaimAudits(); }),
+      create: protectedProcedure.input(z.object({
+        title: z.string().trim().min(2).max(180),
+        description: z.string().trim().min(12).max(5000),
+        pillar: projectReclaimPillarSchema,
+        sourceKind: projectReclaimSourceKindSchema,
+        county: projectReclaimCountySchema,
+        sourceUrl: z.string().url().max(500),
+        availabilityNote: z.string().trim().min(4).max(500),
+        nodeId: z.number().int().positive().optional(),
+        status: z.enum(["draft", "internal_watchlist", "published"]).default("internal_watchlist"),
+      })).mutation(async ({ ctx, input }) => {
+        const operator = await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]);
+        let activeNode = input.nodeId ? await getActiveMonarchNode(input.nodeId) : undefined;
+        if (input.nodeId && !activeNode) throw rootError("Project Reclaim sources can be assigned only to an active Monarch node.", "NOT_FOUND");
+        if (input.status === "published") {
+          if (operator.governanceRole !== "first_executive") throw rootError("Only the First Executive can publish a Project Reclaim source.", "FORBIDDEN");
+          if (!activeNode || !activeNode.regionLabel?.toLowerCase().includes(input.county)) throw rootError("Public Project Reclaim sources require an active node whose regional mandate matches the county.", "FORBIDDEN");
+        }
+        return createProjectReclaimSource({ ...input, nodeId: activeNode?.id ?? null, createdByUserId: ctx.user.id });
+      }),
+      setStatus: protectedProcedure.input(z.object({ sourceId: z.number().int().positive(), status: z.enum(["published", "unpublished", "internal_watchlist"]) })).mutation(async ({ ctx, input }) => {
+        const operator = await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]);
+        const source = await getProjectReclaimSource(input.sourceId);
+        if (!source) throw rootError("Project Reclaim source not found.", "NOT_FOUND");
+        if (input.status === "published") {
+          if (operator.governanceRole !== "first_executive") throw rootError("Only the First Executive can publish a Project Reclaim source.", "FORBIDDEN");
+          const activeNode = source.nodeId ? await getActiveMonarchNode(source.nodeId) : undefined;
+          if (!activeNode || !activeNode.regionLabel?.toLowerCase().includes(source.county)) throw rootError("Public Project Reclaim sources require an active node whose regional mandate matches the county.", "FORBIDDEN");
+        }
+        await setProjectReclaimSourceStatus({ ...input, actorUserId: ctx.user.id });
+        return { updated: true };
+      }),
+      markReviewed: protectedProcedure.input(z.object({ sourceId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        await requireOperator(ctx.user.id, ["first_executive", "directory_steward"]);
+        await markProjectReclaimSourceReviewed({ sourceId: input.sourceId, actorUserId: ctx.user.id });
+        return { reviewed: true };
       }),
     }),
     directories: router({

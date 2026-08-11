@@ -28,6 +28,12 @@ const dbMocks = vi.hoisted(() => ({
   reviewOperatorIntake: vi.fn(),
   setOperatorStatus: vi.fn(),
   listIssuedAttestationsForOperator: vi.fn(),
+  createProjectReclaimSource: vi.fn(),
+  listManagedProjectReclaimSources: vi.fn(),
+  listProjectReclaimAudits: vi.fn(),
+  getProjectReclaimSource: vi.fn(),
+  setProjectReclaimSourceStatus: vi.fn(),
+  markProjectReclaimSourceReviewed: vi.fn(),
 }));
 
 vi.mock("./rootDb", async importOriginal => {
@@ -49,7 +55,7 @@ describe("ROOT issuer and directory authorization", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dbMocks.getActiveOperatorForUser.mockImplementation(async (userId: number) => userId === 90 ? { id: 1, governanceRole: "first_executive", status: "active" } : undefined);
-    dbMocks.getActiveMonarchNode.mockResolvedValue({ id: 1, nodeCode: "A1", status: "active" });
+    dbMocks.getActiveMonarchNode.mockResolvedValue({ id: 1, nodeCode: "A1", status: "active", regionLabel: "Mendocino County, California" });
   });
 
   it("rejects every issuer and directory management route from ordinary members", async () => {
@@ -65,6 +71,8 @@ describe("ROOT issuer and directory authorization", () => {
     await expect(caller.issuer.directories.emergency.setPublication({ resourceId: 1, isPublished: true })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(caller.issuer.operators.intakes.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(caller.issuer.operators.intakes.submit({ candidateMemberCode: "root-0123456789", candidateLabel: "Directory candidate", requestedRole: "directory_steward", regionalScope: "Mendocino County", conflictDisclosure: "No material conflict disclosed." })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.issuer.projectReclaim.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.issuer.projectReclaim.create({ title: "A source", description: "An official public source suitable for Project Reclaim testing.", pillar: "work", sourceKind: "resource", county: "mendocino", sourceUrl: "https://example.org", availabilityNote: "Check the official source for current details.", status: "internal_watchlist" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("allows an administrator to issue a scoped attestation to a member code", async () => {
@@ -167,5 +175,45 @@ describe("ROOT issuer and directory authorization", () => {
     await expect(steward.issuer.attestations.create({ recipientMemberCode: "root-0123456789", issuerLabel: "ROOT issuer", issuerKind: "authorized operator", scope: "source review", evidenceStatus: "verified" })).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(dbMocks.createAttestation).toHaveBeenCalledWith(expect.objectContaining({ issuedByUserId: 92 }));
     expect(dbMocks.createService).toHaveBeenCalledWith(expect.objectContaining({ name: "A verified service" }));
+  });
+
+  it("allows a private Lake County watchlist but requires a county-matched active node and First Executive approval to publish", async () => {
+    const admin = rootRouter.createCaller(context("admin"));
+    await admin.issuer.projectReclaim.create({
+      title: "Lake County Housing",
+      description: "Official Lake County housing information with availability monitored at the source.",
+      pillar: "housing",
+      sourceKind: "resource",
+      county: "lake",
+      sourceUrl: "https://www.lakecountyca.gov/808/Housing",
+      availabilityNote: "The official source currently states its voucher waitlist is closed.",
+      status: "internal_watchlist",
+    });
+    expect(dbMocks.createProjectReclaimSource).toHaveBeenCalledWith(expect.objectContaining({ county: "lake", status: "internal_watchlist", nodeId: null, createdByUserId: 90 }));
+
+    await expect(admin.issuer.projectReclaim.create({
+      title: "Lake County Housing",
+      description: "Official Lake County housing information with availability monitored at the source.",
+      pillar: "housing",
+      sourceKind: "resource",
+      county: "lake",
+      sourceUrl: "https://www.lakecountyca.gov/808/Housing",
+      availabilityNote: "The official source currently states its voucher waitlist is closed.",
+      nodeId: 1,
+      status: "published",
+    })).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+    await admin.issuer.projectReclaim.create({
+      title: "Mendocino CalWORKs Job Services",
+      description: "Official County employment and training support for eligible CalWORKs recipients.",
+      pillar: "work",
+      sourceKind: "resource",
+      county: "mendocino",
+      sourceUrl: "https://www.mendocinocounty.gov/departments/social-services/employment-family-assistance-services/calworks-job-services",
+      availabilityNote: "Eligibility and participation decisions remain with Mendocino County.",
+      nodeId: 1,
+      status: "published",
+    });
+    expect(dbMocks.createProjectReclaimSource).toHaveBeenCalledWith(expect.objectContaining({ county: "mendocino", status: "published", nodeId: 1, createdByUserId: 90 }));
   });
 });

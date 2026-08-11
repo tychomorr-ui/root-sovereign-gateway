@@ -86,3 +86,18 @@
 - [x] Add a private personal ROOT identity setup path that creates and reveals its code only to the owner.
 - [x] Preserve the existing business First Executive identity and prevent the new personal identity card from inheriting any business or operator authority.
 - [x] Verify the owner can retrieve the new personal member code privately and that the business identity remains unchanged.
+- [x] Review the user-supplied Project Reclaim white paper and extract only substantiated program goals, safeguards, and regional starting points.
+- [x] Validate official Mendocino and Lake County work, restoration, and essential-service sources before publishing any Project Reclaim resource or opportunity.
+- [x] Define Project Reclaim as a member-controlled ROOT program with explicit consent, no worker surveillance, no fabricated jobs, and source-linked opportunities.
+- [x] Verify the Project Reclaim member-interest surface provides no automatic operator, employer, or partner authority.
+- [x] Verify Project Reclaim privacy, role boundaries, source metadata, and regional controls before any public publication.
+- [x] Create Project Reclaim source, private interest, and First Executive audit records with no external delivery or tracking fields.
+- [x] Require an active reviewed regional node before a Project Reclaim source can be published, while retaining Lake County entries as private watchlist records until regional stewardship is active.
+- [x] Add a public Project Reclaim page that explains its six pillars, source-only posture, and no-partnership/no-placement safeguards.
+- [x] Verify the private Project Reclaim member panel displays only published sources and saves an actual member note only to the signed-in member’s private ledger.
+- [x] Add an issuer Project Reclaim source-control panel for First Executive review, watchlisting, and public publication under county-matched active node authority.
+- [x] Create the owner-approved A1-reviewed Mendocino County CalWORKs Job Services and Community Development Commission Project Reclaim sources with official links and current availability notes.
+- [x] Create Lake County Housing and Lake County Behavioral Health / Careers as private verified Project Reclaim watchlists only, with their non-public regional status retained.
+- [x] Add and run automated coverage for Project Reclaim published-only visibility and member-interest ownership privacy.
+- [x] Save one owner-approved Project Reclaim private interest note, verify it appears only in the signed-in member ledger, and record read-only ownership evidence.
+- [x] Save the owner-approved neutral Project Reclaim note against the published Community Development Commission source and verify it remains visible only to the owner.

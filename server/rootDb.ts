@@ -11,6 +11,9 @@ import {
   operatorIntakes,
   operators,
   personalIdentities,
+  projectReclaimAudits,
+  projectReclaimInterests,
+  projectReclaimSources,
   scopedVouches,
   services,
   truthPosts,
@@ -423,6 +426,122 @@ export async function respondToScopedVouch(vouchId: number, status: "active" | "
 export async function revokeScopedVouch(vouchId: number) {
   const db = requireDb(await getDb());
   await db.update(scopedVouches).set({ status: "revoked", revokedAt: new Date() }).where(eq(scopedVouches.id, vouchId));
+}
+
+export type ProjectReclaimPillar = "health" | "housing" | "work" | "education" | "community" | "independence";
+export type ProjectReclaimSourceKind = "resource" | "opportunity";
+export type ProjectReclaimCounty = "mendocino" | "lake";
+export type ProjectReclaimSourceStatus = "draft" | "internal_watchlist" | "published" | "unpublished";
+
+function nextProjectReclaimReview() {
+  const reviewDueAt = new Date();
+  reviewDueAt.setMonth(reviewDueAt.getMonth() + 3);
+  return reviewDueAt;
+}
+
+export async function listPublishedProjectReclaimSources() {
+  const db = requireDb(await getDb());
+  return db.select().from(projectReclaimSources).where(eq(projectReclaimSources.status, "published")).orderBy(projectReclaimSources.county, projectReclaimSources.pillar, projectReclaimSources.title);
+}
+
+export async function listManagedProjectReclaimSources() {
+  const db = requireDb(await getDb());
+  return db.select().from(projectReclaimSources).orderBy(desc(projectReclaimSources.createdAt));
+}
+
+export async function getProjectReclaimSource(sourceId: number) {
+  const db = requireDb(await getDb());
+  const records = await db.select().from(projectReclaimSources).where(eq(projectReclaimSources.id, sourceId)).limit(1);
+  return records[0];
+}
+
+export async function createProjectReclaimSource(input: {
+  title: string;
+  description: string;
+  pillar: ProjectReclaimPillar;
+  sourceKind: ProjectReclaimSourceKind;
+  county: ProjectReclaimCounty;
+  sourceUrl: string;
+  availabilityNote: string;
+  nodeId: number | null;
+  status: "draft" | "internal_watchlist" | "published";
+  createdByUserId: number;
+}) {
+  const db = requireDb(await getDb());
+  const now = new Date();
+  await db.insert(projectReclaimSources).values({
+    ...input,
+    verifiedAt: now,
+    reviewDueAt: nextProjectReclaimReview(),
+    publishedAt: input.status === "published" ? now : null,
+    publishedByUserId: input.status === "published" ? input.createdByUserId : null,
+  });
+  const created = await db.select().from(projectReclaimSources).where(and(
+    eq(projectReclaimSources.createdByUserId, input.createdByUserId),
+    eq(projectReclaimSources.title, input.title),
+  )).orderBy(desc(projectReclaimSources.createdAt)).limit(1);
+  if (!created[0]) throw new Error("Unable to create the Project Reclaim source record.");
+  await db.insert(projectReclaimAudits).values({
+    sourceId: created[0].id,
+    actorUserId: input.createdByUserId,
+    action: input.status === "internal_watchlist" ? "watchlisted" : input.status === "published" ? "published" : "created",
+    details: input.status === "published" ? "Source published after active-node validation." : `Source recorded as ${input.status}.`,
+  });
+  return created[0];
+}
+
+export async function setProjectReclaimSourceStatus(input: { sourceId: number; status: "published" | "unpublished" | "internal_watchlist"; actorUserId: number }) {
+  const db = requireDb(await getDb());
+  const now = new Date();
+  await db.update(projectReclaimSources).set({
+    status: input.status,
+    publishedAt: input.status === "published" ? now : null,
+    publishedByUserId: input.status === "published" ? input.actorUserId : null,
+    reviewDueAt: input.status === "published" ? nextProjectReclaimReview() : null,
+  }).where(eq(projectReclaimSources.id, input.sourceId));
+  await db.insert(projectReclaimAudits).values({
+    sourceId: input.sourceId,
+    actorUserId: input.actorUserId,
+    action: input.status === "published" ? "published" : input.status === "unpublished" ? "unpublished" : "watchlisted",
+    details: `Source status set to ${input.status}.`,
+  });
+}
+
+export async function markProjectReclaimSourceReviewed(input: { sourceId: number; actorUserId: number }) {
+  const db = requireDb(await getDb());
+  await db.update(projectReclaimSources).set({ verifiedAt: new Date(), reviewDueAt: nextProjectReclaimReview() }).where(eq(projectReclaimSources.id, input.sourceId));
+  await db.insert(projectReclaimAudits).values({ sourceId: input.sourceId, actorUserId: input.actorUserId, action: "reviewed", details: "Source URL, availability note, and regional status reviewed." });
+}
+
+export async function listProjectReclaimAudits() {
+  const db = requireDb(await getDb());
+  return db.select().from(projectReclaimAudits).orderBy(desc(projectReclaimAudits.createdAt)).limit(200);
+}
+
+export async function saveProjectReclaimInterest(input: { ownerUserId: number; sourceId: number; privateNote: string | null }) {
+  const db = requireDb(await getDb());
+  const existing = await db.select().from(projectReclaimInterests).where(and(
+    eq(projectReclaimInterests.ownerUserId, input.ownerUserId),
+    eq(projectReclaimInterests.sourceId, input.sourceId),
+  )).limit(1);
+  if (existing[0]) {
+    await db.update(projectReclaimInterests).set({ privateNote: input.privateNote }).where(eq(projectReclaimInterests.id, existing[0].id));
+    return existing[0];
+  }
+  await db.insert(projectReclaimInterests).values(input);
+  const created = await db.select().from(projectReclaimInterests).where(and(
+    eq(projectReclaimInterests.ownerUserId, input.ownerUserId),
+    eq(projectReclaimInterests.sourceId, input.sourceId),
+  )).orderBy(desc(projectReclaimInterests.createdAt)).limit(1);
+  if (!created[0]) throw new Error("Unable to save the private Project Reclaim interest.");
+  return created[0];
+}
+
+export async function listOwnProjectReclaimInterests(ownerUserId: number) {
+  const db = requireDb(await getDb());
+  return db.select({ interest: projectReclaimInterests, source: projectReclaimSources }).from(projectReclaimInterests)
+    .innerJoin(projectReclaimSources, eq(projectReclaimInterests.sourceId, projectReclaimSources.id))
+    .where(eq(projectReclaimInterests.ownerUserId, ownerUserId)).orderBy(desc(projectReclaimInterests.updatedAt));
 }
 
 export async function listPublishedServices() {

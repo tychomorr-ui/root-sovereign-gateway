@@ -160,6 +160,50 @@ createdAt: timestamp("createdAt").defaultNow().notNull(),
   emergencyTypeIdx: index("emergency_resources_type_idx").on(table.emergencyType, table.isPublished),
 }));
 
+export const projectReclaimSources = mysqlTable("project_reclaim_sources", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 180 }).notNull(),
+  description: text("description").notNull(),
+  pillar: mysqlEnum("pillar", ["health", "housing", "work", "education", "community", "independence"]).notNull(),
+  sourceKind: mysqlEnum("sourceKind", ["resource", "opportunity"]).notNull(),
+  county: mysqlEnum("county", ["mendocino", "lake"]).notNull(),
+  sourceUrl: varchar("sourceUrl", { length: 500 }).notNull(),
+  availabilityNote: varchar("availabilityNote", { length: 500 }).notNull(),
+  nodeId: int("nodeId"),
+  status: mysqlEnum("status", ["draft", "internal_watchlist", "published", "unpublished"]).notNull().default("draft"),
+  verifiedAt: timestamp("verifiedAt"),
+  reviewDueAt: timestamp("reviewDueAt"),
+  publishedAt: timestamp("publishedAt"),
+  publishedByUserId: int("publishedByUserId").references(() => users.id),
+  createdByUserId: int("createdByUserId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  sourceStatusIdx: index("project_reclaim_sources_status_idx").on(table.status, table.county, table.pillar),
+}));
+
+export const projectReclaimInterests = mysqlTable("project_reclaim_interests", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerUserId: int("ownerUserId").notNull().references(() => users.id),
+  sourceId: int("sourceId").notNull().references(() => projectReclaimSources.id),
+  privateNote: varchar("privateNote", { length: 1000 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  interestOwnerIdx: index("project_reclaim_interests_owner_idx").on(table.ownerUserId, table.createdAt),
+}));
+
+export const projectReclaimAudits = mysqlTable("project_reclaim_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  sourceId: int("sourceId").notNull().references(() => projectReclaimSources.id),
+  actorUserId: int("actorUserId").notNull().references(() => users.id),
+  action: mysqlEnum("action", ["created", "reviewed", "published", "unpublished", "watchlisted"]).notNull(),
+  details: varchar("details", { length: 500 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  sourceAuditIdx: index("project_reclaim_audits_source_idx").on(table.sourceId, table.createdAt),
+}));
+
 export const operators = mysqlTable("operators", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique().references(() => users.id),

@@ -10,6 +10,10 @@ const dbMocks = vi.hoisted(() => ({
   getPersonalIdentity: vi.fn(),
   createPersonalIdentity: vi.fn(),
   createTruthPost: vi.fn(),
+  listPublishedProjectReclaimSources: vi.fn(),
+  getProjectReclaimSource: vi.fn(),
+  saveProjectReclaimInterest: vi.fn(),
+  listOwnProjectReclaimInterests: vi.fn(),
 }));
 
 vi.mock("./rootDb", async importOriginal => {
@@ -91,5 +95,29 @@ describe("ROOT router ownership enforcement", () => {
     await caller.profile.personalIdentity.get();
     expect(dbMocks.createPersonalIdentity).toHaveBeenCalledWith({ ownerUserId: 12, label: "Tyler C. Morris" });
     expect(dbMocks.getPersonalIdentity).toHaveBeenCalledWith(12);
+  });
+
+  it("returns only the reviewed public Project Reclaim source set to members", async () => {
+    const published = [{ id: 1, title: "Published source", status: "published", county: "mendocino" }];
+    dbMocks.listPublishedProjectReclaimSources.mockResolvedValue(published);
+    const caller = rootRouter.createCaller(authenticatedContext(12));
+    await expect(caller.projectReclaim.sources()).resolves.toEqual(published);
+    expect(dbMocks.listPublishedProjectReclaimSources).toHaveBeenCalledOnce();
+  });
+
+  it("keeps Project Reclaim interest writes and reads inside the signed-in member's private ledger", async () => {
+    const caller = rootRouter.createCaller(authenticatedContext(12));
+    dbMocks.getProjectReclaimSource.mockResolvedValue({ id: 1, status: "published" });
+    dbMocks.saveProjectReclaimInterest.mockResolvedValue({ id: 6, ownerUserId: 12, sourceId: 1, privateNote: "Follow up privately." });
+    dbMocks.listOwnProjectReclaimInterests.mockResolvedValue([{ interest: { id: 6, ownerUserId: 12, sourceId: 1 }, source: { id: 1, status: "published" } }]);
+
+    await caller.projectReclaim.interests.save({ sourceId: 1, privateNote: "Follow up privately." });
+    await caller.projectReclaim.interests.mine();
+    expect(dbMocks.saveProjectReclaimInterest).toHaveBeenCalledWith({ ownerUserId: 12, sourceId: 1, privateNote: "Follow up privately." });
+    expect(dbMocks.listOwnProjectReclaimInterests).toHaveBeenCalledWith(12);
+
+    dbMocks.getProjectReclaimSource.mockResolvedValue({ id: 2, status: "internal_watchlist" });
+    await expect(caller.projectReclaim.interests.save({ sourceId: 2 })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(dbMocks.saveProjectReclaimInterest).toHaveBeenCalledTimes(1);
   });
 });

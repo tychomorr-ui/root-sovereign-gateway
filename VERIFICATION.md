@@ -38,6 +38,14 @@ On August 11, 2026, the authenticated owner generated a private personal ROOT co
 
 The duplicate Directory Steward intake that referenced the existing business First Executive identity was declined on the owner’s explicit confirmation. The private intake ledger shows the declined state and decision note, and the separate append-only audit ledger records the First Executive actor and timestamp. The active roster remains unchanged with only the First Executive record active.
 
+## Completed Project Reclaim checks
+
+ROOT now includes a public Project Reclaim page, a private member-interest panel, and a First Executive source-control panel. The integration reflects the supplied white paper’s six pillars—Health, Housing, Work, Education, Community, and Independence—without presenting ROOT as an employer, placement agency, service provider, or partner of listed organizations. A database verification confirmed exactly two A1-linked, published Mendocino County sources (CalWORKs Job Services and the Community Development Commission) and two Lake County internal watchlists (Lake County Housing and Lake County Behavioral Health Services). The Lake entries have no node assignment and cannot enter the public directory until a reviewed, county-matched mandate exists.
+
+The signed-in Member Gateway displayed only the two published Mendocino sources and excluded both Lake County watchlists. Its empty private-interest ledger described that notes are not forwarded to providers, employers, or county agencies. Router coverage confirms that the public source endpoint delegates only to the published-source query, interest writes include the authenticated member as `ownerUserId`, interest reads are limited to that owner, and internal watchlists are rejected as interest targets.
+
+With the owner’s explicit confirmation, the Member Gateway saved one neutral interest note against the published Community Development Commission source. The note appeared only in the signed-in member’s private ledger. A read-only database check confirmed one interest record owned by the signed-in user and linked to a published source; the public Project Reclaim page and First Executive source-control panel displayed source metadata only, with no member-interest content.
+
 ## Completed A1 regional-directory acceptance
 
 On August 11, 2026, the authenticated First Executive session used the corrected `/issuer?tab=services` and `/issuer?tab=emergency` deep links to publish two source-verified Mendocino County records: Employment & Family Assistance Services — Ukiah and Behavioral Health & Recovery Services’ 24/7 Crisis Line. Each record visibly displayed **A1 · NEXINUS Business Anchor** in its managed ledger and carried its publication, verification, and review dates. A direct database check confirmed the persisted `nodeId` is A1 for both entries.
