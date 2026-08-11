@@ -7,6 +7,8 @@ import {
   monarchNodeAudits,
   monarchNodes,
   operatorAudits,
+  operatorIntakeAudits,
+  operatorIntakes,
   operators,
   scopedVouches,
   services,
@@ -149,6 +151,67 @@ export async function listOperators() {
 export async function listOperatorAudits() {
   const db = requireDb(await getDb());
   return db.select().from(operatorAudits).orderBy(desc(operatorAudits.createdAt)).limit(200);
+}
+
+export type RequestedOperatorRole = "issuer" | "directory_steward" | "incident_reviewer";
+
+export async function createOperatorIntake(input: {
+  submittedByUserId: number;
+  candidateMemberCode: string;
+  candidateLabel: string;
+  requestedRole: RequestedOperatorRole;
+  regionalScope: string;
+  conflictDisclosure: string;
+}) {
+  const db = requireDb(await getDb());
+  await db.insert(operatorIntakes).values(input);
+  const created = await db.select().from(operatorIntakes).where(and(
+    eq(operatorIntakes.submittedByUserId, input.submittedByUserId),
+    eq(operatorIntakes.candidateMemberCode, input.candidateMemberCode),
+  )).orderBy(desc(operatorIntakes.createdAt)).limit(1);
+  if (!created[0]) throw new Error("Unable to save the private operator intake.");
+  return created[0];
+}
+
+export async function listOperatorIntakes() {
+  const db = requireDb(await getDb());
+  return db.select().from(operatorIntakes).orderBy(desc(operatorIntakes.createdAt)).limit(100);
+}
+
+export async function listOperatorIntakeAudits() {
+  const db = requireDb(await getDb());
+  return db.select().from(operatorIntakeAudits).orderBy(desc(operatorIntakeAudits.createdAt)).limit(200);
+}
+
+export async function getOperatorIntake(intakeId: number) {
+  const db = requireDb(await getDb());
+  const records = await db.select().from(operatorIntakes).where(eq(operatorIntakes.id, intakeId)).limit(1);
+  return records[0];
+}
+
+export async function reviewOperatorIntake(input: {
+  intakeId: number;
+  status: "approved" | "declined";
+  reviewedByUserId: number;
+  decisionNote: string | null;
+}) {
+  const db = requireDb(await getDb());
+  await db.update(operatorIntakes).set({
+    status: input.status,
+    reviewedByUserId: input.reviewedByUserId,
+    reviewedAt: new Date(),
+    decisionNote: input.decisionNote,
+  }).where(and(eq(operatorIntakes.id, input.intakeId), eq(operatorIntakes.status, "submitted")));
+}
+
+export async function recordOperatorIntakeAudit(input: {
+  intakeId: number;
+  actorUserId: number;
+  action: "approved" | "declined";
+  decisionNote: string;
+}) {
+  const db = requireDb(await getDb());
+  await db.insert(operatorIntakeAudits).values(input);
 }
 
 export async function approveOperator(input: {

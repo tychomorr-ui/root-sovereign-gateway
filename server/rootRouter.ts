@@ -9,12 +9,14 @@ import {
   createAttestation,
   createConsentGrant,
   createEmergencyResource,
+  createOperatorIntake,
   createScopedVouch,
   createService,
   createTruthPost,
   exportMemberData,
   findProfileByMemberCode,
   getActiveOperatorForUser,
+  getOperatorIntake,
   getActiveMonarchNode,
   getOrCreateMemberProfile,
   getScopedVouch,
@@ -31,6 +33,8 @@ import {
   listMonarchNodes,
   listOperators,
   listOperatorAudits,
+  listOperatorIntakeAudits,
+  listOperatorIntakes,
   listOwnTruthPosts,
   listPublicTruthPosts,
   listPublishedServices,
@@ -40,6 +44,8 @@ import {
   markMonarchNodeReviewed,
   markServiceReviewed,
   respondToScopedVouch,
+  recordOperatorIntakeAudit,
+  reviewOperatorIntake,
   revokeAttestation,
   revokeConsentGrant,
   revokeScopedVouch,
@@ -57,6 +63,7 @@ const claimTypeSchema = z.enum(CLAIM_TYPE_VALUES);
 const emergencyTypeSchema = z.enum(["safety", "shelter", "food", "health", "legal", "other"]);
 const governanceRoleSchema = z.enum(["first_executive", "issuer", "directory_steward", "incident_reviewer"]);
 type GovernanceRole = z.infer<typeof governanceRoleSchema>;
+const requestedOperatorRoleSchema = z.enum(["issuer", "directory_steward", "incident_reviewer"]);
 const monarchNodeLayerSchema = z.enum(MONARCH_NODE_LAYERS);
 
 function rootError(message: string, code: "BAD_REQUEST" | "FORBIDDEN" | "NOT_FOUND" = "BAD_REQUEST") {
@@ -244,6 +251,49 @@ export const rootRouter = router({
       }),
       setStatus: protectedProcedure.input(z.object({ operatorId: z.number().int().positive(), status: z.enum(["active", "suspended"]) })).mutation(async ({ ctx, input }) => {
         await requireOperator(ctx.user.id, ["first_executive"]); await setOperatorStatus({ ...input, actorUserId: ctx.user.id }); return { updated: true };
+      }),
+      intakes: router({
+        list: protectedProcedure.query(async ({ ctx }) => {
+          await requireOperator(ctx.user.id, ["first_executive"]);
+          return listOperatorIntakes();
+        }),
+        audit: protectedProcedure.query(async ({ ctx }) => {
+          await requireOperator(ctx.user.id, ["first_executive"]);
+          return listOperatorIntakeAudits();
+        }),
+        submit: protectedProcedure.input(z.object({
+          candidateMemberCode: z.string().trim().min(10).max(40),
+          candidateLabel: z.string().trim().min(2).max(120),
+          requestedRole: requestedOperatorRoleSchema,
+          regionalScope: z.string().trim().min(2).max(160),
+          conflictDisclosure: z.string().trim().min(2).max(5000),
+        })).mutation(async ({ ctx, input }) => {
+          await requireOperator(ctx.user.id, ["first_executive"]);
+          return createOperatorIntake({ ...input, submittedByUserId: ctx.user.id });
+        }),
+        approve: protectedProcedure.input(z.object({ intakeId: z.number().int().positive(), decisionNote: z.string().trim().max(500).optional() })).mutation(async ({ ctx, input }) => {
+          await requireOperator(ctx.user.id, ["first_executive"]);
+          const intake = await getOperatorIntake(input.intakeId);
+          if (!intake) throw rootError("That private operator intake does not exist.", "NOT_FOUND");
+          if (intake.status !== "submitted") throw rootError("Only a submitted operator intake can be approved.");
+          const recipient = await findProfileByMemberCode(intake.candidateMemberCode);
+          if (!recipient) throw rootError("The submitted member code does not match a ROOT profile.", "NOT_FOUND");
+          const reviewDueAt = new Date(); reviewDueAt.setMonth(reviewDueAt.getMonth() + 3);
+          const operator = await approveOperator({ userId: recipient.userId, operatorLabel: intake.candidateLabel, governanceRole: intake.requestedRole, approvedByUserId: ctx.user.id, reviewDueAt });
+          const decisionNote = input.decisionNote ?? "First Executive intake review completed.";
+          await reviewOperatorIntake({ intakeId: intake.id, status: "approved", reviewedByUserId: ctx.user.id, decisionNote });
+          await recordOperatorIntakeAudit({ intakeId: intake.id, actorUserId: ctx.user.id, action: "approved", decisionNote });
+          return operator;
+        }),
+        decline: protectedProcedure.input(z.object({ intakeId: z.number().int().positive(), decisionNote: z.string().trim().min(2).max(500) })).mutation(async ({ ctx, input }) => {
+          await requireOperator(ctx.user.id, ["first_executive"]);
+          const intake = await getOperatorIntake(input.intakeId);
+          if (!intake) throw rootError("That private operator intake does not exist.", "NOT_FOUND");
+          if (intake.status !== "submitted") throw rootError("Only a submitted operator intake can be declined.");
+          await reviewOperatorIntake({ intakeId: intake.id, status: "declined", reviewedByUserId: ctx.user.id, decisionNote: input.decisionNote });
+          await recordOperatorIntakeAudit({ intakeId: intake.id, actorUserId: ctx.user.id, action: "declined", decisionNote: input.decisionNote });
+          return { declined: true };
+        }),
       }),
     }),
     nodes: router({

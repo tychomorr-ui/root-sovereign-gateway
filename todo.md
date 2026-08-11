@@ -71,3 +71,9 @@
 - [x] Add automated coverage that forwards assigned node IDs to directory-create helpers and surfaces node IDs through managed-listing router responses.
 - [x] Display assigned Monarch nodes in the Issuer Workspace service and emergency ledgers, then verify their live authenticated rendering.
 - [x] Make issuer service and emergency directory deep links open their intended panel for acceptance testing.
+- [x] Add a private Operator Intake form with fields for member code, name or role label, least-privilege role, regional scope, and conflict disclosure.
+- [x] Save intake submissions as unapproved private drafts that cannot grant operator authority or publish directory records.
+- [x] Add First Executive review controls to approve or decline a submitted operator-intake draft, with an audit record.
+- [x] Verify the owner can complete the private intake form while ordinary members cannot access or act on submitted drafts.
+- [x] Add a private immutable intake-decision audit record for both First Executive approvals and declines, including actor, timestamp, and decision note.
+- [x] Verify automated coverage proves both private intake approval and decline write an audit record before the workflow is considered complete.

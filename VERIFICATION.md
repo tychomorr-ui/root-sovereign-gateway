@@ -26,7 +26,11 @@ The public ROOT gateway was reviewed at desktop and phone-sized viewports. The m
 
 On August 11, 2026, the authenticated First Executive session opened the dedicated `/issuer/nodes` route. The live issuer ledger displayed the active **A1 · NEXINUS Business Anchor** for Mendocino County, California, together with the seventeen planned A2–A3, R1–R6, and S1–S9 mandates. The session executed **Mark reviewed** for A1 and received the confirmation message “Monarch node review recorded.” The private audit ledger then displayed a new **Reviewed** event stating that the node mandate and capability manifest had been reviewed.
 
-The application’s current automated suite contains seven test files and twenty-eight passing tests. Its Monarch authorization coverage confirms that only the First Executive can register, review, or suspend a node, and that a service record cannot be assigned to a planned or inactive node.
+The application’s current automated suite contains seven test files and twenty-nine passing tests. Its Monarch authorization coverage confirms that only the First Executive can register, review, or suspend a node, and that a service record cannot be assigned to a planned or inactive node.
+
+## Completed private operator-intake checks
+
+The authenticated First Executive issuer workspace displays private text fields for a candidate ROOT member code, name or role-facing label, least-privilege role, regional scope, and conflict disclosure. Submitting the form saves a private intake only; it does not create an active operator record or directory authority. The router tests reject ordinary-member access to the private queue and require an explicit First Executive approval before the existing operator-approval helper is called. Each approval or decline now appends a separate private intake-decision audit entry with its actor, timestamp, and decision note; the issuer interface renders that ledger as read-only historical evidence.
 
 ## Completed A1 regional-directory acceptance
 

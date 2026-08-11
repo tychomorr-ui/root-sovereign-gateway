@@ -4,6 +4,7 @@ import type { TrpcContext } from "./_core/context";
 const dbMocks = vi.hoisted(() => ({
   findProfileByMemberCode: vi.fn(),
   createAttestation: vi.fn(),
+  createOperatorIntake: vi.fn(),
   revokeAttestation: vi.fn(),
   listIssuedAttestations: vi.fn(),
   createService: vi.fn(),
@@ -19,7 +20,12 @@ const dbMocks = vi.hoisted(() => ({
   bootstrapFirstExecutive: vi.fn(),
   listOperators: vi.fn(),
   listOperatorAudits: vi.fn(),
+  listOperatorIntakeAudits: vi.fn(),
+  listOperatorIntakes: vi.fn(),
   approveOperator: vi.fn(),
+  getOperatorIntake: vi.fn(),
+  recordOperatorIntakeAudit: vi.fn(),
+  reviewOperatorIntake: vi.fn(),
   setOperatorStatus: vi.fn(),
   listIssuedAttestationsForOperator: vi.fn(),
 }));
@@ -57,6 +63,8 @@ describe("ROOT issuer and directory authorization", () => {
     await expect(caller.issuer.directories.emergency.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(caller.issuer.directories.emergency.create({ emergencyType: "safety", regionLabel: "A region", resourceName: "A resource", contactLabel: "A contact", sourceUrl: "https://example.org", isPublished: false })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(caller.issuer.directories.emergency.setPublication({ resourceId: 1, isPublished: true })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.issuer.operators.intakes.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.issuer.operators.intakes.submit({ candidateMemberCode: "root-0123456789", candidateLabel: "Directory candidate", requestedRole: "directory_steward", regionalScope: "Mendocino County", conflictDisclosure: "No material conflict disclosed." })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("allows an administrator to issue a scoped attestation to a member code", async () => {
@@ -121,6 +129,27 @@ describe("ROOT issuer and directory authorization", () => {
     expect(dbMocks.listOperatorAudits).toHaveBeenCalledOnce();
     expect(dbMocks.approveOperator).toHaveBeenCalledWith(expect.objectContaining({ userId: 7, governanceRole: "issuer", approvedByUserId: 90 }));
     expect(dbMocks.setOperatorStatus).toHaveBeenCalledWith({ operatorId: 7, status: "suspended", actorUserId: 90 });
+  });
+
+  it("keeps operator intake private until the First Executive explicitly approves or declines it", async () => {
+    const submitted = { id: 41, status: "submitted", candidateMemberCode: "root-0123456789", candidateLabel: "Regional directory candidate", requestedRole: "directory_steward", regionalScope: "Mendocino County", conflictDisclosure: "No material conflict disclosed." };
+    dbMocks.createOperatorIntake.mockResolvedValue(submitted);
+    dbMocks.listOperatorIntakes.mockResolvedValue([submitted]);
+    dbMocks.listOperatorIntakeAudits.mockResolvedValue([]);
+    dbMocks.getOperatorIntake.mockResolvedValue(submitted);
+    dbMocks.findProfileByMemberCode.mockResolvedValue({ userId: 7 });
+    dbMocks.approveOperator.mockResolvedValue({ id: 12, userId: 7, governanceRole: "directory_steward" });
+    const admin = rootRouter.createCaller(context("admin"));
+    await admin.issuer.operators.intakes.submit({ candidateMemberCode: submitted.candidateMemberCode, candidateLabel: submitted.candidateLabel, requestedRole: "directory_steward", regionalScope: submitted.regionalScope, conflictDisclosure: submitted.conflictDisclosure });
+    await expect(admin.issuer.operators.intakes.list()).resolves.toEqual([submitted]);
+    await admin.issuer.operators.intakes.approve({ intakeId: submitted.id, decisionNote: "Scope and conflict review completed." });
+    expect(dbMocks.createOperatorIntake).toHaveBeenCalledWith(expect.objectContaining({ submittedByUserId: 90, requestedRole: "directory_steward" }));
+    expect(dbMocks.approveOperator).toHaveBeenCalledWith(expect.objectContaining({ userId: 7, governanceRole: "directory_steward", approvedByUserId: 90 }));
+    expect(dbMocks.reviewOperatorIntake).toHaveBeenCalledWith({ intakeId: 41, status: "approved", reviewedByUserId: 90, decisionNote: "Scope and conflict review completed." });
+    expect(dbMocks.recordOperatorIntakeAudit).toHaveBeenCalledWith({ intakeId: 41, actorUserId: 90, action: "approved", decisionNote: "Scope and conflict review completed." });
+    await admin.issuer.operators.intakes.decline({ intakeId: submitted.id, decisionNote: "Need a narrower regional scope." });
+    expect(dbMocks.reviewOperatorIntake).toHaveBeenCalledWith({ intakeId: 41, status: "declined", reviewedByUserId: 90, decisionNote: "Need a narrower regional scope." });
+    expect(dbMocks.recordOperatorIntakeAudit).toHaveBeenCalledWith({ intakeId: 41, actorUserId: 90, action: "declined", decisionNote: "Need a narrower regional scope." });
   });
 
   it("enforces role boundaries for issuer and directory-steward operators", async () => {

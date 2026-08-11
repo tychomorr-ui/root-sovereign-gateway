@@ -175,7 +175,37 @@ export const operatorAudits = mysqlTable("operator_audits", {
   details: varchar("details", { length: 500 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => ({
-operatorAuditIdx: index("operator_audits_operator_idx").on(table.operatorId, table.createdAt),
+	operatorAuditIdx: index("operator_audits_operator_idx").on(table.operatorId, table.createdAt),
+}));
+
+export const operatorIntakes = mysqlTable("operator_intakes", {
+  id: int("id").autoincrement().primaryKey(),
+  submittedByUserId: int("submittedByUserId").notNull().references(() => users.id),
+  candidateMemberCode: varchar("candidateMemberCode", { length: 40 }).notNull(),
+  candidateLabel: varchar("candidateLabel", { length: 120 }).notNull(),
+  requestedRole: mysqlEnum("requestedRole", ["issuer", "directory_steward", "incident_reviewer"]).notNull(),
+  regionalScope: varchar("regionalScope", { length: 160 }).notNull(),
+  conflictDisclosure: text("conflictDisclosure").notNull(),
+  status: mysqlEnum("status", ["submitted", "approved", "declined"]).notNull().default("submitted"),
+  reviewedByUserId: int("reviewedByUserId").references(() => users.id),
+  reviewedAt: timestamp("reviewedAt"),
+  decisionNote: varchar("decisionNote", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  statusIdx: index("operator_intakes_status_idx").on(table.status, table.createdAt),
+  submitterIdx: index("operator_intakes_submitter_idx").on(table.submittedByUserId, table.createdAt),
+}));
+
+export const operatorIntakeAudits = mysqlTable("operator_intake_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  intakeId: int("intakeId").notNull().references(() => operatorIntakes.id),
+  actorUserId: int("actorUserId").notNull().references(() => users.id),
+  action: mysqlEnum("action", ["approved", "declined"]).notNull(),
+  decisionNote: varchar("decisionNote", { length: 500 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  intakeAuditIdx: index("operator_intake_audits_intake_idx").on(table.intakeId, table.createdAt),
 }));
 
 export const monarchNodes = mysqlTable("monarch_nodes", {
