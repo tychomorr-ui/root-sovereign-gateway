@@ -28,6 +28,10 @@ On August 11, 2026, the authenticated First Executive session opened the dedicat
 
 The application’s current automated suite contains seven test files and twenty-eight passing tests. Its Monarch authorization coverage confirms that only the First Executive can register, review, or suspend a node, and that a service record cannot be assigned to a planned or inactive node.
 
+## Completed A1 regional-directory acceptance
+
+On August 11, 2026, the authenticated First Executive session used the corrected `/issuer?tab=services` and `/issuer?tab=emergency` deep links to publish two source-verified Mendocino County records: Employment & Family Assistance Services — Ukiah and Behavioral Health & Recovery Services’ 24/7 Crisis Line. Each record visibly displayed **A1 · NEXINUS Business Anchor** in its managed ledger and carried its publication, verification, and review dates. A direct database check confirmed the persisted `nodeId` is A1 for both entries.
+
 ## Member acceptance scenarios
 
 These actions require a real authenticated member account and must be completed before a public launch. They are designed as a concise acceptance walkthrough rather than hidden behavior.

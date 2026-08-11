@@ -15,6 +15,7 @@ const dbMocks = vi.hoisted(() => ({
   markServiceReviewed: vi.fn(),
   markEmergencyResourceReviewed: vi.fn(),
   getActiveOperatorForUser: vi.fn(),
+  getActiveMonarchNode: vi.fn(),
   bootstrapFirstExecutive: vi.fn(),
   listOperators: vi.fn(),
   listOperatorAudits: vi.fn(),
@@ -42,6 +43,7 @@ describe("ROOT issuer and directory authorization", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dbMocks.getActiveOperatorForUser.mockImplementation(async (userId: number) => userId === 90 ? { id: 1, governanceRole: "first_executive", status: "active" } : undefined);
+    dbMocks.getActiveMonarchNode.mockResolvedValue({ id: 1, nodeCode: "A1", status: "active" });
   });
 
   it("rejects every issuer and directory management route from ordinary members", async () => {
@@ -72,15 +74,15 @@ describe("ROOT issuer and directory authorization", () => {
 
   it("allows an administrator to manage issuer, service, and emergency record states", async () => {
     dbMocks.listIssuedAttestations.mockResolvedValue([]);
-    dbMocks.listManagedServices.mockResolvedValue([]);
-    dbMocks.listManagedEmergencyResources.mockResolvedValue([]);
+    dbMocks.listManagedServices.mockResolvedValue([{ id: 22, nodeId: 1 }]);
+    dbMocks.listManagedEmergencyResources.mockResolvedValue([{ id: 23, nodeId: 1 }]);
     const caller = rootRouter.createCaller(context("admin"));
     await caller.issuer.attestations.list();
     await caller.issuer.attestations.revoke({ attestationId: 21 });
-    await caller.issuer.directories.services.list();
+    const managedServices = await caller.issuer.directories.services.list();
     await caller.issuer.directories.services.setPublication({ serviceId: 22, isPublished: true });
     await caller.issuer.directories.services.markReviewed({ serviceId: 22 });
-    await caller.issuer.directories.emergency.list();
+    const managedEmergencyResources = await caller.issuer.directories.emergency.list();
     await caller.issuer.directories.emergency.setPublication({ resourceId: 23, isPublished: true });
     await caller.issuer.directories.emergency.markReviewed({ resourceId: 23 });
     expect(dbMocks.listIssuedAttestations).toHaveBeenCalledOnce();
@@ -91,14 +93,16 @@ describe("ROOT issuer and directory authorization", () => {
     expect(dbMocks.listManagedEmergencyResources).toHaveBeenCalledOnce();
     expect(dbMocks.setEmergencyResourcePublication).toHaveBeenCalledWith(23, true, 90);
     expect(dbMocks.markEmergencyResourceReviewed).toHaveBeenCalledWith(23);
+    expect(managedServices).toEqual([{ id: 22, nodeId: 1 }]);
+    expect(managedEmergencyResources).toEqual([{ id: 23, nodeId: 1 }]);
   });
 
   it("allows an administrator to create verified service and emergency directory records", async () => {
     const caller = rootRouter.createCaller(context("admin"));
-    await caller.issuer.directories.services.create({ name: "A verified service", description: "A real service description suitable for a directory record.", serviceType: "support", eligibilityRequirement: "A scoped eligibility requirement", sourceUrl: "https://example.org/service", isPublished: false });
-    await caller.issuer.directories.emergency.create({ emergencyType: "safety", regionLabel: "A region", resourceName: "A verified resource", contactLabel: "A current public contact", contactUrl: "https://example.org/contact", sourceUrl: "https://example.org/source", latitude: 40, longitude: -73, isPublished: false });
-    expect(dbMocks.createService).toHaveBeenCalledWith(expect.objectContaining({ name: "A verified service", sourceUrl: "https://example.org/service" }));
-    expect(dbMocks.createEmergencyResource).toHaveBeenCalledWith(expect.objectContaining({ resourceName: "A verified resource", sourceUrl: "https://example.org/source", latitude: "40", longitude: "-73" }));
+    await caller.issuer.directories.services.create({ name: "A verified service", description: "A real service description suitable for a directory record.", serviceType: "support", eligibilityRequirement: "A scoped eligibility requirement", sourceUrl: "https://example.org/service", nodeId: 1, isPublished: false });
+    await caller.issuer.directories.emergency.create({ emergencyType: "safety", regionLabel: "A region", resourceName: "A verified resource", contactLabel: "A current public contact", contactUrl: "https://example.org/contact", sourceUrl: "https://example.org/source", latitude: 40, longitude: -73, nodeId: 1, isPublished: false });
+    expect(dbMocks.createService).toHaveBeenCalledWith(expect.objectContaining({ name: "A verified service", sourceUrl: "https://example.org/service", nodeId: 1 }));
+    expect(dbMocks.createEmergencyResource).toHaveBeenCalledWith(expect.objectContaining({ resourceName: "A verified resource", sourceUrl: "https://example.org/source", latitude: "40", longitude: "-73", nodeId: 1 }));
   });
 
   it("bootstraps and administers the First Executive roster only through active First Executive authority", async () => {

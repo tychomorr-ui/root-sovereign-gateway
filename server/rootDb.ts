@@ -360,6 +360,7 @@ export async function createService(input: {
   serviceType: string;
   eligibilityRequirement: string;
   sourceUrl: string;
+  nodeId?: number;
   isPublished: boolean;
   publishedByUserId: number;
 }) {
@@ -454,6 +455,7 @@ export async function createEmergencyResource(input: {
   sourceUrl: string;
   latitude: string | null;
   longitude: string | null;
+  nodeId?: number;
   isPublished: boolean;
   publishedByUserId: number;
 }) {

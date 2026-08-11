@@ -47,7 +47,7 @@
 - [x] Complete substitute non-browser verification of First Executive authority, published directory records, review cadence, and route-level protections.
 - [x] Define the next-stage ROOT architecture as a privacy-preserving recursive capability model with measurable, testable layers.
 - [ ] Collect approved operator member codes, labels, role assignments, conflict disclosures, and target regions before creating roster or directory records.
-- [ ] Validate official public sources and review cadence for each proposed regional emergency or service directory entry.
+- [x] Validate official public sources and review cadence for each proposed regional emergency or service directory entry.
 - [ ] Add only user-approved operators and source-verified regional resources through ROOT’s authorized issuer workflow.
 - [ ] Verify least-privilege access, publication state, and review metadata for the new operator and regional directory entries.
 - [x] Define a provenance-led Truth Talk model that distinguishes source verification, evidence review, and unresolved claims without asserting universal truth.
@@ -67,3 +67,7 @@
 - [x] Prove that `root-3b65c16322bc430e` resolves to the user assigned to the active A1 business anchor, then record the private evidence.
 - [x] Expand node tests to cover only the implemented suspension or reactivation and resource-assignment boundary behaviors, without claiming unimplemented consent-revocation semantics.
 - [x] Complete and document a live authenticated First Executive acceptance pass for `/issuer/nodes`, including A1, planned mandates, and a node review action.
+- [x] Persist each accepted service or emergency directory record’s active Monarch node assignment and verify it is retained in managed listings through database and authenticated-ledger checks.
+- [x] Add automated coverage that forwards assigned node IDs to directory-create helpers and surfaces node IDs through managed-listing router responses.
+- [x] Display assigned Monarch nodes in the Issuer Workspace service and emergency ledgers, then verify their live authenticated rendering.
+- [x] Make issuer service and emergency directory deep links open their intended panel for acceptance testing.
