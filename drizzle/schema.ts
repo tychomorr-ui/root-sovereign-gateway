@@ -40,6 +40,16 @@ export const memberProfiles = mysqlTable("member_profiles", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const personalIdentities = mysqlTable("personal_identities", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerUserId: int("ownerUserId").notNull().unique().references(() => users.id),
+  personalMemberCode: varchar("personalMemberCode", { length: 40 }).notNull().unique(),
+  label: varchar("label", { length: 96 }).notNull(),
+  status: mysqlEnum("status", ["active", "revoked"]).notNull().default("active"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const consentGrants = mysqlTable("consent_grants", {
   id: int("id").autoincrement().primaryKey(),
   ownerUserId: int("ownerUserId").notNull().references(() => users.id),

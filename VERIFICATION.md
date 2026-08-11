@@ -32,6 +32,10 @@ The application’s current automated suite contains seven test files and twenty
 
 The authenticated First Executive issuer workspace displays private text fields for a candidate ROOT member code, name or role-facing label, least-privilege role, regional scope, and conflict disclosure. Submitting the form saves a private intake only; it does not create an active operator record or directory authority. The router tests reject ordinary-member access to the private queue and require an explicit First Executive approval before the existing operator-approval helper is called. Each approval or decline now appends a separate private intake-decision audit entry with its actor, timestamp, and decision note; the issuer interface renders that ledger as read-only historical evidence.
 
+## Completed private personal-code check
+
+On August 11, 2026, the authenticated owner generated a private personal ROOT code in the Member Gateway Identity panel. The code is visible only in the signed-in owner workspace. A database check confirmed that creating this card did not create a second operator record or change the existing business First Executive role. The personal code is therefore a private identity reference, not a second login or an independent operator principal.
+
 ## Completed A1 regional-directory acceptance
 
 On August 11, 2026, the authenticated First Executive session used the corrected `/issuer?tab=services` and `/issuer?tab=emergency` deep links to publish two source-verified Mendocino County records: Employment & Family Assistance Services — Ukiah and Behavioral Health & Recovery Services’ 24/7 Crisis Line. Each record visibly displayed **A1 · NEXINUS Business Anchor** in its managed ledger and carried its publication, verification, and review dates. A direct database check confirmed the persisted `nodeId` is A1 for both entries.

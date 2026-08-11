@@ -10,6 +10,7 @@ import {
   createConsentGrant,
   createEmergencyResource,
   createOperatorIntake,
+  createPersonalIdentity,
   createScopedVouch,
   createService,
   createTruthPost,
@@ -19,6 +20,7 @@ import {
   getOperatorIntake,
   getActiveMonarchNode,
   getOrCreateMemberProfile,
+  getPersonalIdentity,
   getScopedVouch,
   getServiceEligibility,
   listConsentGrants,
@@ -81,6 +83,10 @@ async function requireOperator(userId: number, allowedRoles: GovernanceRole[]) {
 export const rootRouter = router({
   profile: router({
     get: protectedProcedure.query(({ ctx }) => getOrCreateMemberProfile(ctx.user.id)),
+    personalIdentity: router({
+      get: protectedProcedure.query(({ ctx }) => getPersonalIdentity(ctx.user.id)),
+      create: protectedProcedure.input(z.object({ label: z.string().trim().min(2).max(96) })).mutation(({ ctx, input }) => createPersonalIdentity({ ownerUserId: ctx.user.id, label: input.label })),
+    }),
     update: protectedProcedure.input(z.object({ displayName: z.string().trim().min(2).max(96).nullable() }))
       .mutation(({ ctx, input }) => updateMemberProfile(ctx.user.id, input.displayName)),
     requestExport: protectedProcedure.mutation(async ({ ctx }) => {

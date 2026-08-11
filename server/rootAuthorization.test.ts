@@ -14,6 +14,7 @@ describe("ROOT protected procedures", () => {
   it("rejects unauthenticated reads of member profiles, grants, and member records", async () => {
     const caller = appRouter.createCaller(unauthenticatedContext());
     await expect(caller.root.profile.get()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(caller.root.profile.personalIdentity.get()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.root.permissions.list()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.root.memberRecord.mine()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });

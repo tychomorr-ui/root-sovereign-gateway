@@ -7,6 +7,8 @@ const dbMocks = vi.hoisted(() => ({
   respondToScopedVouch: vi.fn(),
   revokeScopedVouch: vi.fn(),
   getOrCreateMemberProfile: vi.fn(),
+  getPersonalIdentity: vi.fn(),
+  createPersonalIdentity: vi.fn(),
   createTruthPost: vi.fn(),
 }));
 
@@ -79,5 +81,15 @@ describe("ROOT router ownership enforcement", () => {
     const voucher = rootRouter.createCaller(authenticatedContext(2));
     await voucher.vouches.revoke({ vouchId: 8 });
     expect(dbMocks.revokeScopedVouch).toHaveBeenCalledWith(8);
+  });
+
+  it("creates and retrieves a personal member code only in the calling member's private scope", async () => {
+    dbMocks.getPersonalIdentity.mockResolvedValue({ id: 9, ownerUserId: 12, personalMemberCode: "root-personal-private", label: "Personal ROOT identity", status: "active" });
+    dbMocks.createPersonalIdentity.mockResolvedValue({ id: 9, ownerUserId: 12, personalMemberCode: "root-personal-private", label: "Tyler C. Morris", status: "active" });
+    const caller = rootRouter.createCaller(authenticatedContext(12));
+    await caller.profile.personalIdentity.create({ label: "Tyler C. Morris" });
+    await caller.profile.personalIdentity.get();
+    expect(dbMocks.createPersonalIdentity).toHaveBeenCalledWith({ ownerUserId: 12, label: "Tyler C. Morris" });
+    expect(dbMocks.getPersonalIdentity).toHaveBeenCalledWith(12);
   });
 });

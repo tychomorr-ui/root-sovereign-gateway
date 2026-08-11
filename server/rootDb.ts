@@ -10,6 +10,7 @@ import {
   operatorIntakeAudits,
   operatorIntakes,
   operators,
+  personalIdentities,
   scopedVouches,
   services,
   truthPosts,
@@ -31,6 +32,23 @@ export async function getOrCreateMemberProfile(userId: number) {
   const created = await db.select().from(memberProfiles).where(eq(memberProfiles.userId, userId)).limit(1);
   if (!created[0]) throw new Error("Unable to create a ROOT member profile.");
   return created[0];
+}
+
+export async function getPersonalIdentity(ownerUserId: number) {
+  const db = requireDb(await getDb());
+  const records = await db.select().from(personalIdentities).where(eq(personalIdentities.ownerUserId, ownerUserId)).limit(1);
+  return records[0];
+}
+
+export async function createPersonalIdentity(input: { ownerUserId: number; label: string }) {
+  const db = requireDb(await getDb());
+  const existing = await getPersonalIdentity(input.ownerUserId);
+  if (existing) return existing;
+  const personalMemberCode = `root-personal-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+  await db.insert(personalIdentities).values({ ...input, personalMemberCode, status: "active" });
+  const created = await getPersonalIdentity(input.ownerUserId);
+  if (!created) throw new Error("Unable to create the private personal ROOT identity.");
+  return created;
 }
 
 export async function updateMemberProfile(userId: number, displayName: string | null) {
