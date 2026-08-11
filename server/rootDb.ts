@@ -98,6 +98,28 @@ export async function listMemberAttestations(userId: number) {
   return db.select().from(attestations).where(eq(attestations.subjectUserId, userId)).orderBy(desc(attestations.issuedAt));
 }
 
+export async function listIssuedAttestations() {
+  const db = requireDb(await getDb());
+  return db.select().from(attestations).orderBy(desc(attestations.issuedAt)).limit(100);
+}
+
+export async function createAttestation(input: {
+  subjectUserId: number;
+  issuedByUserId: number;
+  issuerLabel: string;
+  issuerKind: string;
+  scope: string;
+  evidenceStatus: "not-provided" | "declared" | "verified" | "disputed";
+}) {
+  const db = requireDb(await getDb());
+  await db.insert(attestations).values(input);
+}
+
+export async function revokeAttestation(attestationId: number) {
+  const db = requireDb(await getDb());
+  await db.update(attestations).set({ status: "revoked", revokedAt: new Date() }).where(eq(attestations.id, attestationId));
+}
+
 export async function listMemberVouches(userId: number) {
   const db = requireDb(await getDb());
   return db.select().from(scopedVouches).where(or(
@@ -191,6 +213,28 @@ export async function listPublishedServices() {
   return db.select().from(services).where(eq(services.isPublished, true));
 }
 
+export async function listManagedServices() {
+  const db = requireDb(await getDb());
+  return db.select().from(services).orderBy(desc(services.createdAt));
+}
+
+export async function createService(input: {
+  name: string;
+  description: string;
+  serviceType: string;
+  eligibilityRequirement: string;
+  sourceUrl: string;
+  isPublished: boolean;
+}) {
+  const db = requireDb(await getDb());
+  await db.insert(services).values(input);
+}
+
+export async function setServicePublication(serviceId: number, isPublished: boolean) {
+  const db = requireDb(await getDb());
+  await db.update(services).set({ isPublished }).where(eq(services.id, serviceId));
+}
+
 export async function getServiceEligibility(userId: number, serviceId: number) {
   const db = requireDb(await getDb());
   const service = await db.select().from(services).where(and(eq(services.id, serviceId), eq(services.isPublished, true))).limit(1);
@@ -243,6 +287,31 @@ export async function listEmergencyResources(
     if (right.distanceMiles === null) return -1;
     return left.distanceMiles - right.distanceMiles;
   }).slice(0, 5);
+}
+
+export async function listManagedEmergencyResources() {
+  const db = requireDb(await getDb());
+  return db.select().from(emergencyResources).orderBy(desc(emergencyResources.createdAt));
+}
+
+export async function createEmergencyResource(input: {
+  emergencyType: "safety" | "shelter" | "food" | "health" | "legal" | "other";
+  regionLabel: string;
+  resourceName: string;
+  contactLabel: string;
+  contactUrl: string | null;
+  sourceUrl: string;
+  latitude: string | null;
+  longitude: string | null;
+  isPublished: boolean;
+}) {
+  const db = requireDb(await getDb());
+  await db.insert(emergencyResources).values({ ...input, verifiedAt: new Date() });
+}
+
+export async function setEmergencyResourcePublication(resourceId: number, isPublished: boolean) {
+  const db = requireDb(await getDb());
+  await db.update(emergencyResources).set({ isPublished }).where(eq(emergencyResources.id, resourceId));
 }
 
 export async function exportMemberData(userId: number) {

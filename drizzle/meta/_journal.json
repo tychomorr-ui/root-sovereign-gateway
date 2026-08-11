@@ -15,6 +15,13 @@
       "when": 1786467699661,
       "tag": "0001_wide_yellowjacket",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786468734094,
+      "tag": "0002_fair_xorn",
+      "breakpoints": true
     }
   ]
 }

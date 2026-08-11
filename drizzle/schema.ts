@@ -58,6 +58,7 @@ export const consentGrants = mysqlTable("consent_grants", {
 export const attestations = mysqlTable("attestations", {
   id: int("id").autoincrement().primaryKey(),
   subjectUserId: int("subjectUserId").notNull().references(() => users.id),
+  issuedByUserId: int("issuedByUserId").references(() => users.id),
   issuerLabel: varchar("issuerLabel", { length: 140 }).notNull(),
   issuerKind: varchar("issuerKind", { length: 80 }).notNull(),
   scope: varchar("scope", { length: 180 }).notNull(),
@@ -116,6 +117,7 @@ export const services = mysqlTable("services", {
   description: text("description").notNull(),
   serviceType: varchar("serviceType", { length: 100 }).notNull(),
   eligibilityRequirement: varchar("eligibilityRequirement", { length: 240 }).notNull(),
+  sourceUrl: varchar("sourceUrl", { length: 500 }).notNull(),
   isPublished: boolean("isPublished").notNull().default(false),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => ({
@@ -129,6 +131,7 @@ export const emergencyResources = mysqlTable("emergency_resources", {
   resourceName: varchar("resourceName", { length: 160 }).notNull(),
   contactLabel: varchar("contactLabel", { length: 280 }).notNull(),
   contactUrl: varchar("contactUrl", { length: 500 }),
+  sourceUrl: varchar("sourceUrl", { length: 500 }).notNull(),
   latitude: varchar("latitude", { length: 32 }),
   longitude: varchar("longitude", { length: 32 }),
   verifiedAt: timestamp("verifiedAt"),

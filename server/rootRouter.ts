@@ -3,8 +3,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { canRespondToVouch, canRevokeVouch, CLAIM_TYPE_VALUES, consentReceiptText, EMERGENCY_PRIVACY_NOTICE, emergencyLocationIsPersistent, truthOkSignals } from "../shared/root";
 import {
+  createAttestation,
   createConsentGrant,
+  createEmergencyResource,
   createScopedVouch,
+  createService,
   createTruthPost,
   exportMemberData,
   findProfileByMemberCode,
@@ -13,6 +16,9 @@ import {
   getServiceEligibility,
   listConsentGrants,
   listEmergencyResources,
+  listIssuedAttestations,
+  listManagedEmergencyResources,
+  listManagedServices,
   listMemberAttestations,
   listMemberVouches,
   listOwnTruthPosts,
@@ -21,12 +27,15 @@ import {
   markDeletionRequested,
   markExportRequested,
   respondToScopedVouch,
+  revokeAttestation,
   revokeConsentGrant,
   revokeScopedVouch,
+  setEmergencyResourcePublication,
+  setServicePublication,
   updateMemberProfile,
   withdrawTruthPost,
 } from "./rootDb";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
 const claimTypeSchema = z.enum(CLAIM_TYPE_VALUES);
 const emergencyTypeSchema = z.enum(["safety", "shelter", "food", "health", "legal", "other"]);
@@ -191,6 +200,70 @@ export const rootRouter = router({
           ? "Verified directory entries are shown below. ROOT did not store your location."
           : "No verified ROOT directory entry is currently available for this category. If you are in immediate danger, contact your local emergency service.",
       };
+    }),
+  }),
+
+  issuer: router({
+    attestations: router({
+      list: adminProcedure.query(() => listIssuedAttestations()),
+      create: adminProcedure.input(z.object({
+        recipientMemberCode: z.string().trim().min(10).max(40),
+        issuerLabel: z.string().trim().min(2).max(140),
+        issuerKind: z.string().trim().min(2).max(80),
+        scope: z.string().trim().min(4).max(180),
+        evidenceStatus: z.enum(["not-provided", "declared", "verified", "disputed"]),
+      })).mutation(async ({ ctx, input }) => {
+        const recipient = await findProfileByMemberCode(input.recipientMemberCode);
+        if (!recipient) throw rootError("That member code does not match a ROOT profile.", "NOT_FOUND");
+        await createAttestation({ subjectUserId: recipient.userId, issuedByUserId: ctx.user.id, issuerLabel: input.issuerLabel, issuerKind: input.issuerKind, scope: input.scope, evidenceStatus: input.evidenceStatus });
+        return { created: true };
+      }),
+      revoke: adminProcedure.input(z.object({ attestationId: z.number().int().positive() })).mutation(async ({ input }) => {
+        await revokeAttestation(input.attestationId);
+        return { revoked: true };
+      }),
+    }),
+    directories: router({
+      services: router({
+        list: adminProcedure.query(() => listManagedServices()),
+        create: adminProcedure.input(z.object({
+          name: z.string().trim().min(2).max(140),
+          description: z.string().trim().min(12).max(5000),
+          serviceType: z.string().trim().min(2).max(100),
+          eligibilityRequirement: z.string().trim().min(4).max(240),
+          sourceUrl: z.string().url().max(500),
+          isPublished: z.boolean().default(false),
+        })).mutation(async ({ input }) => {
+          await createService(input);
+          return { created: true };
+        }),
+        setPublication: adminProcedure.input(z.object({ serviceId: z.number().int().positive(), isPublished: z.boolean() })).mutation(async ({ input }) => {
+          await setServicePublication(input.serviceId, input.isPublished);
+          return { updated: true };
+        }),
+      }),
+      emergency: router({
+        list: adminProcedure.query(() => listManagedEmergencyResources()),
+        create: adminProcedure.input(z.object({
+          emergencyType: emergencyTypeSchema,
+          regionLabel: z.string().trim().min(2).max(160),
+          resourceName: z.string().trim().min(2).max(160),
+          contactLabel: z.string().trim().min(2).max(280),
+          contactUrl: z.string().url().max(500).optional(),
+          sourceUrl: z.string().url().max(500),
+          latitude: z.number().min(-90).max(90).optional(),
+          longitude: z.number().min(-180).max(180).optional(),
+          isPublished: z.boolean().default(false),
+        })).mutation(async ({ input }) => {
+          if ((input.latitude === undefined) !== (input.longitude === undefined)) throw rootError("Provide both directory coordinates or neither.");
+          await createEmergencyResource({ ...input, contactUrl: input.contactUrl ?? null, latitude: input.latitude?.toString() ?? null, longitude: input.longitude?.toString() ?? null });
+          return { created: true };
+        }),
+        setPublication: adminProcedure.input(z.object({ resourceId: z.number().int().positive(), isPublished: z.boolean() })).mutation(async ({ input }) => {
+          await setEmergencyResourcePublication(input.resourceId, input.isPublished);
+          return { updated: true };
+        }),
+      }),
     }),
   }),
 });

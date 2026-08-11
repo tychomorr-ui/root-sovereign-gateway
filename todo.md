@@ -24,3 +24,10 @@
 - [x] Add a focused regression check for local-only Truth Talk digest derivation and publication payload metadata.
 - [x] Document the available visual and automated verification evidence for ROOT’s primary flows and remaining manual acceptance checks.
 - [x] Add a router-level regression test proving that a local file digest is carried into Truth Talk publication metadata.
+- [x] Add an admin-only issuer workflow for creating and managing member attestations.
+- [x] Add admin-only management procedures for real service-directory and emergency-resource records.
+- [x] Build an authorized Issuer workspace with attestation, service, and emergency-resource forms.
+- [x] Keep real directories empty until an authorized administrator adds verified provider records; do not seed fictional providers or services.
+- [x] Add and run automated authorization coverage for issuer and directory-management workflows.
+- [x] Expand issuer authorization tests to cover all list, revoke, create, and publication-management routes for admin and non-admin callers.
+- [x] Add the remaining issuer-create authorization tests for non-admin attestation denial and administrator service or emergency creation success.

@@ -63,7 +63,7 @@ export default function MemberWorkspace() {
       <header className="sticky top-0 z-30 border-b border-[#d9ddd4] bg-[#eff1eb]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-5 lg:px-8">
           <Link href="/" className="group flex items-center gap-3"><RootGlyph /><span className="font-serif text-xl tracking-tight">ROOT</span><span className="hidden text-[10px] font-bold tracking-[0.18em] text-[#6a7469] sm:inline">MEMBER GATEWAY</span></Link>
-          <div className="flex items-center gap-3 text-sm"><span className="hidden text-[#657064] sm:inline">{user?.name || "Member"}</span><Button variant="outline" onClick={handleLogout} className="h-9 rounded-full border-[#cbd1c5] bg-transparent px-4 text-xs">Sign out</Button></div>
+          <div className="flex items-center gap-3 text-sm">{user?.role === "admin" && <Link href="/issuer"><Button variant="outline" className="hidden h-9 rounded-full border-[#b6cd94] bg-[#f3f9e9] px-4 text-xs text-[#3e5a27] sm:inline-flex">Issuer workspace</Button></Link>}<span className="hidden text-[#657064] sm:inline">{user?.name || "Member"}</span><Button variant="outline" onClick={handleLogout} className="h-9 rounded-full border-[#cbd1c5] bg-transparent px-4 text-xs">Sign out</Button></div>
         </div>
       </header>
       <main className="mx-auto grid max-w-[1440px] lg:grid-cols-[260px_1fr]">
