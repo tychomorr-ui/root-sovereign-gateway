@@ -113,6 +113,21 @@
   --sidebar-ring: oklch(0.488 0.243 264.376);
 }
 
+@keyframes root-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes root-soft-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes root-status-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(183, 237, 85, 0.18); }
+  50% { box-shadow: 0 0 0 6px rgba(183, 237, 85, 0); }
+}
+
 @layer base {
   html,
   body,
@@ -142,24 +157,11 @@
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
   }
 
@@ -170,16 +172,16 @@
 
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-left: 1.5rem;
       padding-right: 1.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem; /* 32px - desktop padding */
+      padding-left: 2rem;
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1280px;
     }
   }
 
@@ -215,11 +217,63 @@
     font-size: 0.875rem;
     color: #1d281f;
     outline: none;
-    transition: border-color 160ms ease, box-shadow 160ms ease;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
   }
 
   .field-input:focus {
     border-color: #6d9850;
     box-shadow: 0 0 0 3px rgba(123, 166, 74, 0.16);
+  }
+
+  .motion-enter {
+    animation: root-soft-enter 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  .motion-lift {
+    transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 200ms ease, border-color 200ms ease, background-color 200ms ease;
+  }
+
+  .motion-lift:hover {
+    transform: translateY(-3px);
+  }
+
+  .motion-lift:active {
+    transform: translateY(-1px) scale(0.99);
+  }
+
+  .motion-stagger > * {
+    animation: root-soft-enter 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  .motion-stagger > *:nth-child(2) { animation-delay: 45ms; }
+  .motion-stagger > *:nth-child(3) { animation-delay: 90ms; }
+  .motion-stagger > *:nth-child(4) { animation-delay: 135ms; }
+  .motion-stagger > *:nth-child(5) { animation-delay: 180ms; }
+  .motion-stagger > *:nth-child(6) { animation-delay: 225ms; }
+
+  .motion-skeleton {
+    background: linear-gradient(105deg, rgba(225, 231, 222, 0.72) 25%, rgba(247, 249, 245, 0.98) 42%, rgba(225, 231, 222, 0.72) 60%);
+    background-size: 200% 100%;
+    animation: root-skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+
+  .motion-status-pulse {
+    animation: root-status-pulse 2.2s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+    }
+
+    .motion-lift:hover,
+    .motion-lift:active {
+      transform: none;
+    }
   }
 }

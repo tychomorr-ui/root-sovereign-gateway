@@ -60,7 +60,7 @@ export default function ConnectionStatus() {
 
   if (connection.state === "active") {
     return (
-      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-[#cfe6ac] bg-[#f4faeb]/95 px-3 py-2 text-xs font-semibold text-[#486229] shadow-lg shadow-[#23351e]/10 backdrop-blur" role="status" aria-live="polite">
+      <div className="motion-status-pulse fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-[#cfe6ac] bg-[#f4faeb]/95 px-3 py-2 text-xs font-semibold text-[#486229] shadow-lg shadow-[#23351e]/10 backdrop-blur" role="status" aria-live="polite">
         <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
         <span>{label}</span>
       </div>
@@ -69,7 +69,7 @@ export default function ConnectionStatus() {
 
   const reconnecting = connection.state === "reconnecting";
   return (
-    <aside className="fixed bottom-4 right-4 z-50 w-[min(25rem,calc(100vw-2rem))] rounded-[1.35rem] border border-[#e7c5bb] bg-[#fffaf8]/95 p-4 text-[#2b2925] shadow-2xl shadow-[#4e211a]/15 backdrop-blur" role="alert" aria-live="assertive">
+    <aside className="motion-enter fixed bottom-4 right-4 z-50 w-[min(25rem,calc(100vw-2rem))] rounded-[1.35rem] border border-[#e7c5bb] bg-[#fffaf8]/95 p-4 text-[#2b2925] shadow-2xl shadow-[#4e211a]/15 backdrop-blur" role="alert" aria-live="assertive">
       <div className="flex items-start gap-3">
         <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${reconnecting ? "bg-[#fff0cf] text-[#875c12]" : "bg-[#ffe5df] text-[#a44332]"}`}>
           {reconnecting ? <Wifi className="h-4.5 w-4.5" aria-hidden="true" /> : <WifiOff className="h-4.5 w-4.5" aria-hidden="true" />}
