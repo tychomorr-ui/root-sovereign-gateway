@@ -39,7 +39,7 @@ async function startServer() {
   registerOAuthRoutes(app);
   app.get("/.well-known/atmos-identity.json", (_req, res) => {
     res
-      .type("application/json")
+      .type("text/plain")
       .set("Cache-Control", "public, max-age=0, no-transform")
       .send(atmosIdentityManifest);
   });
