@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import path from "node:path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -31,9 +32,11 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  const identityManifestPath = new URL(
-    "../../client/public/.well-known/atmos-identity.json",
-    import.meta.url
+  const identityManifestPath = path.resolve(
+    import.meta.dirname,
+    process.env.NODE_ENV === "production"
+      ? "public/.well-known/atmos-identity.json"
+      : "../../client/public/.well-known/atmos-identity.json"
   );
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
@@ -44,7 +47,7 @@ async function startServer() {
     res
       .type("application/json")
       .set("Cache-Control", "public, max-age=0, no-transform")
-      .sendFile(identityManifestPath.pathname);
+      .sendFile(identityManifestPath);
   });
   // tRPC API
   app.use(
