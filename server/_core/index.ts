@@ -9,7 +9,8 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { atmosIdentityManifest } from "../identityManifest";
-import { acceptAtmosReceipt, issueAtmosChallenge } from "../atmosDb";
+import { acceptAtmosReceipt, issueAtmosChallenge, scanAtmosReceiptExpiry } from "../atmosDb";
+import { sdk } from "./sdk";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -83,6 +84,17 @@ async function startServer() {
       .type("text/plain")
       .set("Cache-Control", "public, max-age=0, no-transform")
       .send(atmosIdentityManifest);
+  });
+  app.post("/api/scheduled/atmos-receipt-monitor", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
+      const alerts = await scanAtmosReceiptExpiry();
+      return res.status(200).json({ ok: true, taskUid: user.taskUid, alertsCreated: alerts.length, alerts });
+    } catch (error) {
+      console.error("[ATMOS] scheduled receipt monitor failed", error);
+      return res.status(500).json({ error: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() });
+    }
   });
   // tRPC API
   app.use(
