@@ -54,8 +54,8 @@
 - [x] Prepare a private draft-only least-privilege operator intake for an eligible distinct account, without activating any authority.
 - [x] Create the owner-authorized Directory Steward draft for Mendocino source review and Lake County private-watchlist monitoring with the conservative non-partnership conflict disclosure.
 - [x] Restart ROOT after the reported development-service interruption and verify the application reaches a clean running state.
-- [ ] Recover the managed browser-control session after the reported VNC disconnection and verify it is usable before requesting issuer sign-in again.
-- [ ] Verify the currently signed-in browser account’s ROOT issuer authority once browser control is restored; the protected non-browser First Executive workflow was used for this approval.
+- [x] Recover the managed browser-control session after the reported VNC disconnection and verify it is usable before requesting issuer sign-in again; the sandbox browser opened ROOT and the protected sign-in flow, but the sign-in page did not complete.
+- [x] Verify the currently signed-in browser account’s ROOT issuer authority once browser control is restored; My Browser signed in as hello@nexinusrisystemsllc.com and opened the protected Issuer Workspace with the active First Executive and Directory Steward roster, then opened the ARCHANGEL Enrollment console.
 - [x] Invoke the existing First Executive-protected intake procedure to save the owner-authorized Directory Steward record as a draft only, with duplicate and active-operator safeguards.
 - [x] Verify the exact submitted Directory Steward intake, the decline audit for its incomplete superseded draft, and the absence of any operator record for the candidate.
 - [x] Define a provenance-led Truth Talk model that distinguishes source verification, evidence review, and unresolved claims without asserting universal truth.
