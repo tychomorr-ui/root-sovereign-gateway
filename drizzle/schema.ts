@@ -293,3 +293,65 @@ export const monarchNodeAudits = mysqlTable("monarch_node_audits", {
 }, table => ({
   nodeAuditIdx: index("monarch_node_audits_node_idx").on(table.nodeId, table.createdAt),
 }));
+
+export const atmosNodeRegistrations = mysqlTable("atmos_node_registrations", {
+  id: int("id").autoincrement().primaryKey(),
+  nodeId: varchar("nodeId", { length: 64 }).notNull().unique(),
+  displayName: varchar("displayName", { length: 180 }).notNull(),
+  endpointUrl: varchar("endpointUrl", { length: 500 }).notNull(),
+  publicKeyPem: text("publicKeyPem").notNull(),
+  publicKeyFingerprint: varchar("publicKeyFingerprint", { length: 64 }).notNull(),
+  approvedScope: varchar("approvedScope", { length: 120 }).notNull().default("read:health"),
+  verificationState: mysqlEnum("verificationState", ["pending", "verified", "suspended"]).notNull().default("pending"),
+  reachability: mysqlEnum("reachability", ["unknown", "reachable"]).notNull().default("unknown"),
+  nodeVersion: varchar("nodeVersion", { length: 120 }),
+  lastReceiptHash: varchar("lastReceiptHash", { length: 128 }),
+  lastObservedAt: timestamp("lastObservedAt"),
+  lastVerifiedAt: timestamp("lastVerifiedAt"),
+  registeredByUserId: int("registeredByUserId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  verificationIdx: index("atmos_node_registrations_verification_idx").on(table.verificationState, table.nodeId),
+}));
+
+export const atmosChallenges = mysqlTable("atmos_challenges", {
+  id: int("id").autoincrement().primaryKey(),
+  challengeId: varchar("challengeId", { length: 80 }).notNull().unique(),
+  nodeId: varchar("nodeId", { length: 64 }).notNull(),
+  nonceHash: varchar("nonceHash", { length: 64 }).notNull(),
+  issuedAt: timestamp("issuedAt").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  challengeNodeIdx: index("atmos_challenges_node_idx").on(table.nodeId, table.expiresAt),
+}));
+
+export const atmosReceipts = mysqlTable("atmos_receipts", {
+  id: int("id").autoincrement().primaryKey(),
+  nodeId: varchar("nodeId", { length: 64 }).notNull(),
+  challengeId: varchar("challengeId", { length: 80 }).notNull().unique(),
+  receiptHash: varchar("receiptHash", { length: 128 }).notNull().unique(),
+  canonicalPayload: text("canonicalPayload").notNull(),
+  signature: text("signature").notNull(),
+  nodeVersion: varchar("nodeVersion", { length: 120 }).notNull(),
+  nodeStatus: mysqlEnum("nodeStatus", ["ok", "degraded", "not_ready"]).notNull(),
+  capabilitiesJson: text("capabilitiesJson").notNull(),
+  observedAt: timestamp("observedAt").notNull(),
+  verifiedAt: timestamp("verifiedAt").defaultNow().notNull(),
+}, table => ({
+  receiptNodeIdx: index("atmos_receipts_node_idx").on(table.nodeId, table.verifiedAt),
+}));
+
+export const atmosAudits = mysqlTable("atmos_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  nodeId: varchar("nodeId", { length: 64 }).notNull(),
+  action: mysqlEnum("action", ["registered", "updated", "challenge.issued", "receipt.recorded", "receipt.rejected", "suspended"]).notNull(),
+  actorUserId: int("actorUserId").references(() => users.id),
+  receiptHash: varchar("receiptHash", { length: 128 }),
+  details: varchar("details", { length: 500 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  atmosAuditNodeIdx: index("atmos_audits_node_idx").on(table.nodeId, table.createdAt),
+}));

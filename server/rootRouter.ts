@@ -69,6 +69,7 @@ import {
   withdrawTruthPost,
 } from "./rootDb";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { listAtmosAudits, listAtmosEnrollments, listAtmosReceipts, registerAtmosNode } from "./atmosDb";
 
 const claimTypeSchema = z.enum(CLAIM_TYPE_VALUES);
 const emergencyTypeSchema = z.enum(["safety", "shelter", "food", "health", "legal", "other"]);
@@ -352,6 +353,25 @@ export const rootRouter = router({
       }),
       markReviewed: protectedProcedure.input(z.object({ nodeId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
         await requireOperator(ctx.user.id, ["first_executive"]); await markMonarchNodeReviewed({ nodeId: input.nodeId, actorUserId: ctx.user.id }); return { reviewed: true };
+      }),
+    }),
+    atmos: router({
+      enrollments: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive"]); return listAtmosEnrollments(); }),
+      receipts: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive"]); return listAtmosReceipts(); }),
+      audit: protectedProcedure.query(async ({ ctx }) => { await requireOperator(ctx.user.id, ["first_executive"]); return listAtmosAudits(); }),
+      register: protectedProcedure.input(z.object({
+        nodeId: z.string().trim().regex(/^[a-z0-9-]+$/),
+        displayName: z.string().trim().min(2).max(180),
+        endpointUrl: z.string().url().max(500),
+        publicKeyPem: z.string().trim().min(80).max(2000),
+        approvedScope: z.literal("read:health").default("read:health"),
+      })).mutation(async ({ ctx, input }) => {
+        await requireOperator(ctx.user.id, ["first_executive"]);
+        try {
+          return await registerAtmosNode({ ...input, registeredByUserId: ctx.user.id });
+        } catch (error) {
+          throw rootError(error instanceof Error ? error.message : "Unable to register the node.");
+        }
       }),
     }),
     attestations: router({

@@ -71,6 +71,13 @@
       "when": 1786480367527,
       "tag": "0009_loose_amphibian",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1792979404843,
+      "tag": "0010_safe_cerebro",
+      "breakpoints": true
     }
   ]
 }

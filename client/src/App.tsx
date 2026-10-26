@@ -6,6 +6,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import AtmosEnrollment from "./pages/AtmosEnrollment";
 import IssuerWorkspace from "./pages/IssuerWorkspace";
 import MemberWorkspace from "./pages/MemberWorkspace";
 import ProjectReclaim from "./pages/ProjectReclaim";
@@ -21,6 +22,7 @@ function Router() {
       <Route path={"/reclaim"} component={ProjectReclaim} />
       <Route path={"/issuer"} component={IssuerWorkspace} />
       <Route path={"/issuer/nodes"} component={IssuerWorkspace} />
+      <Route path={"/issuer/atmos"} component={AtmosEnrollment} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
