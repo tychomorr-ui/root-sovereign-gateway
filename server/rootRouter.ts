@@ -725,26 +725,22 @@ export const rootRouter = router({
         import: protectedProcedure
           .input(
             z.object({
-              contract: z.literal("TESSERACT_A_HEALTH_RECEIPT/v1"),
-              receiptId: z.string().trim().min(8).max(160),
-              nodeId: z.string().trim().min(2).max(64),
-              nodeEndpoint: z.string().url().max(500),
-              nodePublicKeyFingerprint: z
-                .string()
-                .regex(/^[a-f0-9]{64}$/),
-              artifactSha256: z
-                .string()
-                .regex(/^sha256:[a-f0-9]{64}$/)
-                .nullable()
-                .optional(),
+              v: z.literal("ARCHANGEL/v0"),
+              node: z.string().trim().min(2).max(64),
+              ts: z.number().int().positive(),
+              payload: z.object({
+                node: z.string().trim().min(2).max(64),
+                ts: z.number().int().positive(),
+                uname: z.string().trim().min(1).max(180),
+                kernel: z.string().trim().min(1).max(180),
+              }),
+              payload_cid: z.string().regex(/^[a-f0-9]{64}$/),
+              sig: z.string().regex(/^[a-f0-9]{128}$/),
+              pub: z.string().regex(/^[a-f0-9]{64}$/),
+              sourceEndpoint: z.string().url().max(500).nullable().optional(),
+              nodeStatus: z.enum(["ok", "degraded", "not_ready"]).nullable().optional(),
+              artifactSha256: z.string().regex(/^sha256:[a-f0-9]{64}$/).nullable().optional(),
               manifestCid: z.string().trim().max(160).nullable().optional(),
-              nodeStatus: z.enum(["ok", "degraded", "not_ready"]),
-              boundary: z.literal(
-                "SIGNED_HEALTH_OBSERVATION_NOT_SERVICE_AUTHORITY"
-              ),
-              observedAt: z.string().datetime({ offset: true }),
-              expiresAt: z.string().datetime({ offset: true }),
-              signature: z.string().trim().min(20).max(1000),
             })
           )
           .mutation(async ({ ctx, input }) => {

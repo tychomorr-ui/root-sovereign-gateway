@@ -8,26 +8,32 @@ import { desc, eq } from "drizzle-orm";
 import { archangelReceiptImports } from "../drizzle/schema";
 import { getDb } from "./db";
 
-export const ARCHANGEL_RECEIPT_CONTRACT =
-  "TESSERACT_A_HEALTH_RECEIPT/v1" as const;
+export const ARCHANGEL_RECEIPT_CONTRACT = "ARCHANGEL/v0" as const;
 export const ARCHANGEL_RECEIPT_BOUNDARY =
-  "SIGNED_HEALTH_OBSERVATION_NOT_SERVICE_AUTHORITY" as const;
+  "SIGNED_NODE_STATUS_OBSERVATION_NOT_SERVICE_AUTHORITY" as const;
+const DEFAULT_RECEIPT_TTL_SECONDS = 300;
 
 type ReceiptStatus = "ok" | "degraded" | "not_ready";
 
+type SignedStatusPayload = {
+  node: string;
+  ts: number;
+  uname: string;
+  kernel: string;
+};
+
 export type ArchangelReceiptEnvelope = {
-  contract: typeof ARCHANGEL_RECEIPT_CONTRACT;
-  receiptId: string;
-  nodeId: string;
-  nodeEndpoint: string;
-  nodePublicKeyFingerprint: string;
+  v: typeof ARCHANGEL_RECEIPT_CONTRACT;
+  node: string;
+  ts: number;
+  payload: SignedStatusPayload;
+  payload_cid: string;
+  sig: string;
+  pub: string;
+  sourceEndpoint?: string | null;
+  nodeStatus?: ReceiptStatus | null;
   artifactSha256?: string | null;
   manifestCid?: string | null;
-  nodeStatus: ReceiptStatus;
-  boundary: typeof ARCHANGEL_RECEIPT_BOUNDARY;
-  observedAt: string;
-  expiresAt: string;
-  signature: string;
 };
 
 function sortCanonical(value: unknown): unknown {
@@ -42,13 +48,11 @@ function sortCanonical(value: unknown): unknown {
   return value;
 }
 
-export function canonicalArchangelReceipt(
-  receipt: Omit<ArchangelReceiptEnvelope, "signature">
-) {
-  return JSON.stringify(sortCanonical(receipt));
+export function canonicalArchangelPayload(payload: SignedStatusPayload) {
+  return JSON.stringify(sortCanonical(payload));
 }
 
-function requiredPublicKeyPem() {
+function requiredPublicKey() {
   const value = process.env.ARCHANGEL_RECEIPT_PUBLIC_KEY_PEM?.trim();
   if (!value) throw new Error("ARCHANGEL receipt trust root is not configured.");
   const key = createPublicKey(value);
@@ -57,49 +61,70 @@ function requiredPublicKeyPem() {
   return key;
 }
 
+function rawPublicKeyHex(key: ReturnType<typeof createPublicKey>) {
+  const der = key.export({ type: "spki", format: "der" });
+  return der.subarray(-32).toString("hex");
+}
+
 function constantTimeHexEqual(left: string, right: string) {
   if (!/^[a-f0-9]{64}$/.test(left) || !/^[a-f0-9]{64}$/.test(right))
     return false;
   return timingSafeEqual(Buffer.from(left, "hex"), Buffer.from(right, "hex"));
 }
 
-function validateTimestamp(value: string, label: string) {
-  const time = Date.parse(value);
-  if (!Number.isFinite(time)) throw new Error(`${label} must be an ISO timestamp.`);
-  return new Date(time);
+function receiptExpiry(ts: number) {
+  const ttl = Number(process.env.ARCHANGEL_RECEIPT_TTL_SECONDS ?? DEFAULT_RECEIPT_TTL_SECONDS);
+  const ttlSeconds = Number.isFinite(ttl) && ttl > 0 && ttl <= 86400 ? ttl : DEFAULT_RECEIPT_TTL_SECONDS;
+  return new Date((ts + ttlSeconds) * 1000);
 }
 
 export function verifyArchangelReceipt(input: ArchangelReceiptEnvelope) {
-  if (input.contract !== ARCHANGEL_RECEIPT_CONTRACT)
+  if (input.v !== ARCHANGEL_RECEIPT_CONTRACT)
     throw new Error("Unsupported ARCHANGEL receipt contract.");
-  if (input.boundary !== ARCHANGEL_RECEIPT_BOUNDARY)
-    throw new Error("Receipt boundary is not the approved observation boundary.");
-  if (!/^[a-f0-9]{64}$/.test(input.nodePublicKeyFingerprint))
-    throw new Error("Node public-key fingerprint must be lowercase SHA-256 hex.");
-  const observedAt = validateTimestamp(input.observedAt, "observedAt");
-  const expiresAt = validateTimestamp(input.expiresAt, "expiresAt");
-  if (expiresAt <= observedAt) throw new Error("Receipt expiry must follow observation time.");
+  if (!Number.isInteger(input.ts) || input.ts <= 0)
+    throw new Error("ARCHANGEL receipt timestamp is invalid.");
+  const observedAt = new Date(input.ts * 1000);
+  const expiresAt = receiptExpiry(input.ts);
   if (expiresAt.getTime() <= Date.now()) throw new Error("Receipt is expired.");
-  const publicKey = requiredPublicKeyPem();
-  const unsigned = { ...input };
-  delete (unsigned as Partial<ArchangelReceiptEnvelope>).signature;
-  const canonicalPayload = canonicalArchangelReceipt(
-    unsigned as Omit<ArchangelReceiptEnvelope, "signature">
+  if (!/^[a-f0-9]{64}$/.test(input.pub))
+    throw new Error("Receipt public key must be lowercase raw Ed25519 hex.");
+  if (!/^[a-f0-9]{64}$/.test(input.payload_cid))
+    throw new Error("Receipt payload_cid must be lowercase SHA-256 hex.");
+  if (!/^[a-f0-9]{128}$/.test(input.sig))
+    throw new Error("Receipt signature must be lowercase Ed25519 hex.");
+  if (input.node !== input.payload.node)
+    throw new Error("Receipt node does not match its signed payload.");
+  const canonicalPayload = canonicalArchangelPayload(input.payload);
+  const calculatedCid = createHash("sha256").update(canonicalPayload).digest("hex");
+  if (!constantTimeHexEqual(calculatedCid, input.payload_cid))
+    throw new Error("Receipt payload_cid does not match the canonical payload.");
+  const authority = requiredPublicKey();
+  if (!constantTimeHexEqual(input.pub, rawPublicKeyHex(authority)))
+    throw new Error("Receipt signer is not the pinned ARCHANGEL trust root.");
+  const valid = verify(
+    null,
+    Buffer.from(`${input.payload_cid}|${input.ts}`),
+    authority,
+    Buffer.from(input.sig, "hex")
   );
-  const signature = Buffer.from(input.signature, "base64");
-  if (!signature.length) throw new Error("Receipt signature is empty.");
-  if (!verify(null, Buffer.from(canonicalPayload), publicKey, signature))
-    throw new Error("ARCHANGEL receipt signature verification failed.");
+  if (!valid) throw new Error("ARCHANGEL receipt signature verification failed.");
+  const canonicalEnvelope = JSON.stringify(sortCanonical({
+    v: input.v,
+    node: input.node,
+    ts: input.ts,
+    payload: input.payload,
+    payload_cid: input.payload_cid,
+    sig: input.sig,
+    pub: input.pub,
+  }));
   return {
-    canonicalPayload,
-    receiptHash: `sha256:${createHash("sha256")
-      .update(canonicalPayload)
-      .update(signature)
-      .digest("hex")}`,
+    canonicalPayload: canonicalEnvelope,
+    receiptHash: `sha256:${createHash("sha256").update(canonicalEnvelope).digest("hex")}`,
+    receiptId: `${input.node}:${input.payload_cid}`,
     observedAt,
     expiresAt,
     authorityFingerprint: createHash("sha256")
-      .update(publicKey.export({ type: "spki", format: "der" }))
+      .update(authority.export({ type: "spki", format: "der" }))
       .digest("hex"),
   };
 }
@@ -142,28 +167,28 @@ export async function importArchangelReceipt(
     .limit(1);
   if (existing[0]) throw new Error("This signed ARCHANGEL receipt was already imported.");
   await db.insert(archangelReceiptImports).values({
-    receiptId: input.receiptId,
+    receiptId: verified.receiptId,
     receiptHash: verified.receiptHash,
-    contract: input.contract,
-    nodeId: input.nodeId,
-    nodeEndpoint: input.nodeEndpoint,
-    nodePublicKeyFingerprint: input.nodePublicKeyFingerprint,
+    contract: input.v,
+    nodeId: input.node,
+    nodeEndpoint: input.sourceEndpoint ?? null,
+    nodePublicKeyFingerprint: input.pub,
     artifactSha256: input.artifactSha256 ?? null,
     manifestCid: input.manifestCid ?? null,
-    nodeStatus: input.nodeStatus,
-    boundary: input.boundary,
+    nodeStatus: input.nodeStatus ?? null,
+    boundary: ARCHANGEL_RECEIPT_BOUNDARY,
     canonicalPayload: verified.canonicalPayload,
-    signature: input.signature,
+    signature: input.sig,
     observedAt: verified.observedAt,
     expiresAt: verified.expiresAt,
     importedByUserId: input.importedByUserId,
   });
   return {
     imported: true,
-    receiptId: input.receiptId,
+    receiptId: verified.receiptId,
     receiptHash: verified.receiptHash,
     authorityFingerprint: verified.authorityFingerprint,
-    boundary: input.boundary,
+    boundary: ARCHANGEL_RECEIPT_BOUNDARY,
     observedAt: verified.observedAt.toISOString(),
     expiresAt: verified.expiresAt.toISOString(),
   };
@@ -171,7 +196,7 @@ export async function importArchangelReceipt(
 
 export function publicArchangelReceiptContract() {
   try {
-    const key = requiredPublicKeyPem();
+    const key = requiredPublicKey();
     return {
       status: "configured" as const,
       contract: ARCHANGEL_RECEIPT_CONTRACT,
@@ -188,5 +213,3 @@ export function publicArchangelReceiptContract() {
     };
   }
 }
-
-export { constantTimeHexEqual };

@@ -1,0 +1,2 @@
+ALTER TABLE `archangel_receipt_imports` MODIFY COLUMN `nodeEndpoint` varchar(500);--> statement-breakpoint
+ALTER TABLE `archangel_receipt_imports` MODIFY COLUMN `nodeStatus` enum('ok','degraded','not_ready');

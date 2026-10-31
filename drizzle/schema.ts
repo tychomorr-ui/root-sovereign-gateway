@@ -630,7 +630,7 @@ export const archangelReceiptImports = mysqlTable(
     receiptHash: varchar("receiptHash", { length: 128 }).notNull().unique(),
     contract: varchar("contract", { length: 120 }).notNull(),
     nodeId: varchar("nodeId", { length: 64 }).notNull(),
-    nodeEndpoint: varchar("nodeEndpoint", { length: 500 }).notNull(),
+    nodeEndpoint: varchar("nodeEndpoint", { length: 500 }),
     nodePublicKeyFingerprint: varchar("nodePublicKeyFingerprint", {
       length: 64,
     }).notNull(),
@@ -640,7 +640,7 @@ export const archangelReceiptImports = mysqlTable(
       "ok",
       "degraded",
       "not_ready",
-    ]).notNull(),
+    ]),
     boundary: varchar("boundary", { length: 160 }).notNull(),
     canonicalPayload: text("canonicalPayload").notNull(),
     signature: text("signature").notNull(),

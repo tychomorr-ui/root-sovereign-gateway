@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { atmosIdentityManifest } from "../identityManifest";
 import { acceptAtmosReceipt, issueAtmosChallenge, scanAtmosReceiptExpiry } from "../atmosDb";
+import { publicArchangelReceiptContract } from "../archangelReceipts";
 import { sdk } from "./sdk";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -84,6 +85,9 @@ async function startServer() {
       .type("text/plain")
       .set("Cache-Control", "public, max-age=0, no-transform")
       .send(atmosIdentityManifest);
+  });
+  app.get("/api/archangel/contract", (_req, res) => {
+    return res.status(200).json(publicArchangelReceiptContract());
   });
   app.post("/api/scheduled/atmos-receipt-monitor", async (req, res) => {
     try {

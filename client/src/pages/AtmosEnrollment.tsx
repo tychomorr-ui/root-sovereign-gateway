@@ -346,7 +346,7 @@ export default function AtmosEnrollment() {
               </div>
               <form onSubmit={submitArchangelReceipt} className="space-y-4 p-6">
                 <p className="text-xs leading-5 text-[#687468]">
-                  Contract: <span className="font-mono">TESSERACT_A_HEALTH_RECEIPT/v1</span> · boundary: signed health observation only. This does not grant service authority, publish Truth Talk claims, or mark a node verified outside ROOT’s receipt ledger.
+                  Contract: <span className="font-mono">ARCHANGEL/v0</span> · signs <span className="font-mono">payload_cid|ts</span> with the pinned Ed25519 key. This is a signed node-status observation only; it does not grant service authority, publish Truth Talk claims, or mark a node verified outside ROOT’s receipt ledger.
                 </p>
                 <textarea
                   value={archangelReceiptJson}
