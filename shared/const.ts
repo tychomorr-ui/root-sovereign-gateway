@@ -4,6 +4,13 @@ export const AXIOS_TIMEOUT_MS = 30_000;
 export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 
+export const TRUTH_TALK_INTEGRATION_STATUS = {
+  routeArchitecture: "native_root_surface",
+  externalIdentityHandoff: "PENDING_CONTRACT",
+  externalSource: "TRUTH_TALK_SOURCE_NOT_PRESENT",
+  dataBoundary: "ROOT_OWNED_LEDGER_IN_CURRENT_BUILD",
+} as const;
+
 // One-time nonce cookie that binds an OAuth login to the browser that started
 // it. The `__Host-` prefix forces the cookie host-only (Secure, Path=/, no
 // Domain), so a sibling *.manus.space site cannot plant a matching value in a

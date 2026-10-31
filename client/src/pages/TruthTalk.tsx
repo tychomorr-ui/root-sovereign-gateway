@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { startLogin } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { TRUTH_TALK_INTEGRATION_STATUS } from "@shared/const";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, CircleCheck, ExternalLink, FileKey2, Link2, Radio, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
@@ -80,7 +81,7 @@ export default function TruthTalk() {
           </section>
         </>}
 
-        <section className="mt-8 flex flex-col gap-4 rounded-[1.5rem] border border-white/10 bg-white/[.035] p-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#c7ff61]" /><p className="max-w-2xl text-xs leading-5 text-[#aeb8ac]">Truth Talk does not claim to determine universal truth. It displays the author’s declared claim type, the evidence path they supplied, and each distinct TruthOK signal.</p></div>{isAuthenticated ? <Link href="/app"><Button className="rounded-full bg-[#c7ff61] px-4 text-xs font-bold text-[#111713] hover:bg-[#d6ff89]">Publish a declared claim <ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Button></Link> : <Button onClick={startLogin} className="rounded-full bg-[#c7ff61] px-4 text-xs font-bold text-[#111713] hover:bg-[#d6ff89]">Join ROOT to publish</Button>}</section>
+        <section className="mt-8 flex flex-col gap-4 rounded-[1.5rem] border border-white/10 bg-white/[.035] p-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#c7ff61]" /><div><p className="max-w-2xl text-xs leading-5 text-[#aeb8ac]">Truth Talk does not claim to determine universal truth. It displays the author’s declared claim type, the evidence path they supplied, and each distinct TruthOK signal.</p><p className="mt-3 text-[10px] font-bold tracking-[.12em] text-[#c7ff61]">BOUNDARY: {TRUTH_TALK_INTEGRATION_STATUS.routeArchitecture.replaceAll("_", " ")}</p><p className="mt-1 text-[10px] text-[#95a294]">External identity handoff: {TRUTH_TALK_INTEGRATION_STATUS.externalIdentityHandoff.replaceAll("_", " ")} · external Truth Talk source: {TRUTH_TALK_INTEGRATION_STATUS.externalSource.replaceAll("_", " ")}</p></div></div>{isAuthenticated ? <Link href="/app"><Button className="rounded-full bg-[#c7ff61] px-4 text-xs font-bold text-[#111713] hover:bg-[#d6ff89]">Publish a declared claim <ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Button></Link> : <Button onClick={startLogin} className="rounded-full bg-[#c7ff61] px-4 text-xs font-bold text-[#111713] hover:bg-[#d6ff89]">Join ROOT to publish</Button>}</section>
       </main>
     </div>
   );
