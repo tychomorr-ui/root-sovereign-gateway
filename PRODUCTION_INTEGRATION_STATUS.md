@@ -16,7 +16,7 @@ Audit date: 2026-10-31
 ```text
 ROOTGATE_TRUTHTALK_ROUTE = native_root_surface_plus_verified_static_spa
 ROOTGATE_TRUTHTALK_IDENTITY_HANDOFF = PENDING_CONTRACT
-TRUTH_TALK_SOURCE = TRUTH_TALK_STATIC_RELEASE_SOURCE_NOT_ATTACHED
+TRUTH_TALK_SOURCE = CONTINUATION_ARCHIVE_ATTACHED_STATIC_SOURCE_REVIEWED
 TRUTH_TALK_EXTERNAL_DEPLOYMENT = VERIFIED_AT_ROOTGATE_TRUTHTALK_PATH
 TRUTH_TALK_DATA_BOUNDARY = ROOT_OWNED_IN_CURRENT_BUILD
 ARCHANGEL_RECEIPT_IMPORT = IMPLEMENTED_AND_PINNED
@@ -71,7 +71,7 @@ The standalone Truth Talk path `https://rootgate.nexinus.net/truthtalk/` returne
 ## Remaining blockers
 
 1. **SERVER_ACCESS_REQUIRED:** The DigitalOcean droplets are reachable over HTTPS, but this execution environment has no SSH private key and batch SSH access failed with `Permission denied (publickey)`. Read-only server inspection of systemd, nginx, service directories, and logs therefore remains unavailable.
-2. **TRUTH_TALK_SOURCE_NOT_PRESENT_IN_CURRENT_SESSION:** The standalone static release is verified at `/truthtalk/`, but its source repository and any server-backed Truth Talk data plane were not attached or discoverable in the current session.
+2. **TRUTH_TALK_DATA_PLANE_NOT_PRESENT:** The continuation archive is now attached and reviewed. It supplies the static TruthTalk source, transport helpers, deployment materials, and signed-contract specifications, but it does not contain a TruthTalk server, database, account service, or remote media API.
 3. **ROOTGATE_TRUTHTALK_IDENTITY_HANDOFF = PENDING_CONTRACT:** No supported cross-application session or identity handoff contract was found, so none was invented.
 4. A versioned Rootgate identity handoff is still required before ROOT can activate a cross-application connection beyond the verified static path.
 5. Receipt trust is now pinned to the public key derived from Penguin’s `/home/kether_gate/atmos-operator-v2/keys/archangel.pem`; its fingerprint matches the live Archangel governance manifest. A receipt still does not imply service authority or Truth Talk publication.
