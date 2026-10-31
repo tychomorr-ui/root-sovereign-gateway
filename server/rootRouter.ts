@@ -93,6 +93,11 @@ import {
   registerTruthTalkConnection,
   scanAtmosReceiptExpiry,
 } from "./atmosDb";
+import {
+  importArchangelReceipt,
+  listArchangelReceiptImports,
+  publicArchangelReceiptContract,
+} from "./archangelReceipts";
 
 const claimTypeSchema = z.enum(CLAIM_TYPE_VALUES);
 const emergencyTypeSchema = z.enum([
@@ -707,6 +712,56 @@ export const rootRouter = router({
       alerts: protectedProcedure.query(async ({ ctx }) => {
         await requireOperator(ctx.user.id, ["first_executive"]);
         return listAtmosAlerts();
+      }),
+      archangel: router({
+        contract: protectedProcedure.query(async ({ ctx }) => {
+          await requireOperator(ctx.user.id, ["first_executive"]);
+          return publicArchangelReceiptContract();
+        }),
+        receipts: protectedProcedure.query(async ({ ctx }) => {
+          await requireOperator(ctx.user.id, ["first_executive"]);
+          return listArchangelReceiptImports();
+        }),
+        import: protectedProcedure
+          .input(
+            z.object({
+              contract: z.literal("TESSERACT_A_HEALTH_RECEIPT/v1"),
+              receiptId: z.string().trim().min(8).max(160),
+              nodeId: z.string().trim().min(2).max(64),
+              nodeEndpoint: z.string().url().max(500),
+              nodePublicKeyFingerprint: z
+                .string()
+                .regex(/^[a-f0-9]{64}$/),
+              artifactSha256: z
+                .string()
+                .regex(/^sha256:[a-f0-9]{64}$/)
+                .nullable()
+                .optional(),
+              manifestCid: z.string().trim().max(160).nullable().optional(),
+              nodeStatus: z.enum(["ok", "degraded", "not_ready"]),
+              boundary: z.literal(
+                "SIGNED_HEALTH_OBSERVATION_NOT_SERVICE_AUTHORITY"
+              ),
+              observedAt: z.string().datetime({ offset: true }),
+              expiresAt: z.string().datetime({ offset: true }),
+              signature: z.string().trim().min(20).max(1000),
+            })
+          )
+          .mutation(async ({ ctx, input }) => {
+            await requireOperator(ctx.user.id, ["first_executive"]);
+            try {
+              return await importArchangelReceipt({
+                ...input,
+                importedByUserId: ctx.user.id,
+              });
+            } catch (error) {
+              throw rootError(
+                error instanceof Error
+                  ? error.message
+                  : "Unable to import the signed ARCHANGEL receipt."
+              );
+            }
+          }),
       }),
       scanAlerts: protectedProcedure.mutation(async ({ ctx }) => {
         await requireOperator(ctx.user.id, ["first_executive"]);

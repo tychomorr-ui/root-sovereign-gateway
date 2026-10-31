@@ -85,6 +85,13 @@
       "when": 1792983247854,
       "tag": "0011_fine_silver_fox",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1793467291794,
+      "tag": "0012_outgoing_rocket_raccoon",
+      "breakpoints": true
     }
   ]
 }

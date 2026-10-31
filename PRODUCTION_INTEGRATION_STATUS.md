@@ -9,6 +9,7 @@ Audit date: 2026-10-31
 - **Deployment evidence:** The DigitalOcean host `rootgate.nexinus.net` returns HTTP 200 for `/truthtalk/`, `/.well-known/atmos-identity.json`, and `/health`; `/truth` returns HTTP 404. The standalone SPA is the verified public Truth Talk path, while `/truth` is not the standalone app.
 - **Data boundary:** The standalone release is documented as static-only and has no configured account service, application database, remote messenger, media host, or upload endpoint. ROOT’s native `/truth` feed continues to use ROOT-owned `truth_posts`; no separate Truth Talk-owned backend/data boundary is verified.
 - **Identity boundary:** ROOT authentication is the current identity mechanism. A separate Rootgate-to-external-Truth-Talk identity handoff was not found.
+- **Archangel receipt boundary:** ROOT now accepts a pinned-key, Ed25519-signed `TESSERACT_A_HEALTH_RECEIPT/v1` envelope through a First Executive-only import procedure. The imported record is explicitly bounded to `SIGNED_HEALTH_OBSERVATION_NOT_SERVICE_AUTHORITY`; it cannot publish Truth Talk claims, grant service authority, or activate arbitrary node control.
 
 ## Explicit status
 
@@ -18,6 +19,8 @@ ROOTGATE_TRUTHTALK_IDENTITY_HANDOFF = PENDING_CONTRACT
 TRUTH_TALK_SOURCE = TRUTH_TALK_STATIC_RELEASE_SOURCE_NOT_ATTACHED
 TRUTH_TALK_EXTERNAL_DEPLOYMENT = VERIFIED_AT_ROOTGATE_TRUTHTALK_PATH
 TRUTH_TALK_DATA_BOUNDARY = ROOT_OWNED_IN_CURRENT_BUILD
+ARCHANGEL_RECEIPT_IMPORT = IMPLEMENTED_FAIL_CLOSED
+ARCHANGEL_RECEIPT_TRUST_ROOT = ARCHANGEL_RECEIPT_PUBLIC_KEY_PEM_REQUIRED
 ```
 
 These states are deliberately explicit. ROOT verifies the standalone static Truth Talk path, but does not claim that a Truth Talk API, separate database, cross-application identity handoff, or signed receipt-import contract exists until those facts are established by source and production evidence.
@@ -57,6 +60,10 @@ The standalone Truth Talk path `https://rootgate.nexinus.net/truthtalk/` returne
 - `shared/const.ts` — added the explicit integration status constants.
 - `client/src/pages/TruthTalk.tsx` — added a visible boundary notice identifying the route as a native ROOT surface and the external identity handoff/source as pending/not present.
 - `client/src/pages/Home.tsx` — changed the public dedicated Truth Talk navigation and CTA to the verified DigitalOcean `/truthtalk/` path; the native `/truth` route remains available.
+- `server/archangelReceipts.ts` — added canonical JSON, pinned Ed25519 verification, duplicate rejection, expiry checks, receipt hashing, and provenance-preserving storage.
+- `server/archangelReceipts.test.ts` — added valid-signature, missing-trust-root, tamper, and boundary regression coverage.
+- `drizzle/schema.ts` / `drizzle/0012_outgoing_rocket_raccoon.sql` — added the additive Archangel receipt-import ledger.
+- `server/rootRouter.ts` / `client/src/pages/AtmosEnrollment.tsx` — added First Executive-only contract status, JSON import, and signed receipt visibility.
 - `PRODUCTION_INTEGRATION_STATUS.md` — recorded the evidence and blockers.
 
 ## Remaining blockers
@@ -65,5 +72,6 @@ The standalone Truth Talk path `https://rootgate.nexinus.net/truthtalk/` returne
 2. **TRUTH_TALK_SOURCE_NOT_PRESENT_IN_CURRENT_SESSION:** The standalone static release is verified at `/truthtalk/`, but its source repository and any server-backed Truth Talk data plane were not attached or discoverable in the current session.
 3. **ROOTGATE_TRUTHTALK_IDENTITY_HANDOFF = PENDING_CONTRACT:** No supported cross-application session or identity handoff contract was found, so none was invented.
 4. A versioned Rootgate identity handoff and any signed Archangel receipt-import contract are still required before ROOT can activate a cross-application connection beyond the verified static path.
+5. The receipt-import code is intentionally fail-closed until `ARCHANGEL_RECEIPT_PUBLIC_KEY_PEM` is configured. Penguin’s discovered `/etc/atmos/identity/archangel-public.pem` and Resonate manifest key fingerprints did not match the live Archangel governance manifest fingerprint, so neither was trusted automatically.
 
 No DNS records, DigitalOcean files, databases, private keys, or external services were modified by this audit.

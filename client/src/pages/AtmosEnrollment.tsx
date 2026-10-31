@@ -11,6 +11,7 @@ import {
   FileCheck2,
   Bell,
   Globe2,
+  Upload,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { ATMOS_NODE_CATALOG } from "@shared/atmos";
@@ -26,6 +27,14 @@ export default function AtmosEnrollment() {
   const receipts = trpc.root.issuer.atmos.receipts.useQuery(undefined, {
     enabled: Boolean(operators.data?.length),
   });
+  const archangelContract = trpc.root.issuer.atmos.archangel.contract.useQuery(
+    undefined,
+    { enabled: Boolean(operators.data?.length) }
+  );
+  const archangelReceipts = trpc.root.issuer.atmos.archangel.receipts.useQuery(
+    undefined,
+    { enabled: Boolean(operators.data?.length) }
+  );
   const audit = trpc.root.issuer.atmos.audit.useQuery(undefined, {
     enabled: Boolean(operators.data?.length),
   });
@@ -48,6 +57,7 @@ export default function AtmosEnrollment() {
   const [truthOriginUrl, setTruthOriginUrl] = useState("");
   const [truthFeedUrl, setTruthFeedUrl] = useState("");
   const [truthPublicKeyPem, setTruthPublicKeyPem] = useState("");
+  const [archangelReceiptJson, setArchangelReceiptJson] = useState("");
   const register = trpc.root.issuer.atmos.register.useMutation({
     onSuccess: () => {
       void utils.root.issuer.atmos.enrollments.invalidate();
@@ -65,6 +75,15 @@ export default function AtmosEnrollment() {
   const acknowledgeAlert = trpc.root.issuer.atmos.acknowledgeAlert.useMutation({
     onSuccess: () => void utils.root.issuer.atmos.alerts.invalidate(),
   });
+  const importArchangelReceipt =
+    trpc.root.issuer.atmos.archangel.import.useMutation({
+      onSuccess: data => {
+        void utils.root.issuer.atmos.archangel.receipts.invalidate();
+        setArchangelReceiptJson("");
+        toast.success(`ARCHANGEL receipt imported: ${data.receiptHash}`);
+      },
+      onError: error => toast.error(error.message),
+    });
   const registerTruthTalk =
     trpc.root.issuer.atmos.truthTalk.register.useMutation({
       onSuccess: () => {
@@ -121,6 +140,14 @@ export default function AtmosEnrollment() {
       feedUrl: truthFeedUrl,
       publicKeyPem: truthPublicKeyPem || undefined,
     });
+  };
+  const submitArchangelReceipt = (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      importArchangelReceipt.mutate(JSON.parse(archangelReceiptJson));
+    } catch {
+      toast.error("Paste one valid signed ARCHANGEL receipt JSON object.");
+    }
   };
   const enrollmentById = new Map(
     (enrollments.data ?? []).map(item => [item.nodeId, item])
@@ -302,6 +329,58 @@ export default function AtmosEnrollment() {
                   );
                 })}
               </div>
+            </div>
+            <div className="panel overflow-hidden">
+              <div className="border-b border-[#dfe4dc] p-6">
+                <div className="flex items-center gap-3">
+                  <Upload className="h-5 w-5 text-[#5d8330]" />
+                  <div>
+                    <h2 className="font-serif text-2xl">Import signed ARCHANGEL receipt</h2>
+                    <p className="mt-1 text-sm text-[#687468]">
+                      {archangelContract.data?.status === "configured"
+                        ? `Pinned Ed25519 trust root · ${archangelContract.data.authorityFingerprint}`
+                        : "Trust root not configured; imports fail closed until the public key is pinned."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <form onSubmit={submitArchangelReceipt} className="space-y-4 p-6">
+                <p className="text-xs leading-5 text-[#687468]">
+                  Contract: <span className="font-mono">TESSERACT_A_HEALTH_RECEIPT/v1</span> · boundary: signed health observation only. This does not grant service authority, publish Truth Talk claims, or mark a node verified outside ROOT’s receipt ledger.
+                </p>
+                <textarea
+                  value={archangelReceiptJson}
+                  onChange={event => setArchangelReceiptJson(event.target.value)}
+                  className="field-input min-h-44 resize-y font-mono text-xs"
+                  placeholder="Paste the complete signed receipt JSON object here."
+                  required
+                />
+                <Button
+                  type="submit"
+                  disabled={importArchangelReceipt.isPending || archangelContract.data?.status !== "configured"}
+                  className="rounded-xl bg-[#18211c] text-white hover:bg-[#293b2e]"
+                >
+                  {importArchangelReceipt.isPending ? "Verifying signature…" : "Verify and import receipt"}
+                </Button>
+              </form>
+              {archangelReceipts.data?.length ? (
+                <div className="divide-y divide-[#dfe4dc] border-t border-[#dfe4dc]">
+                  {archangelReceipts.data.slice(0, 8).map(receipt => (
+                    <div key={receipt.id} className="p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{receipt.nodeId} · {receipt.receiptId}</p>
+                          <p className="mt-1 text-xs text-[#687468]">
+                            {receipt.nodeStatus} · observed {new Date(receipt.observedAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-[#e8f6c8] px-2.5 py-1 text-[10px] font-bold text-[#4a642a]">SIGNED</span>
+                      </div>
+                      <p className="mt-3 break-all font-mono text-[10px] text-[#687468]">{receipt.receiptHash}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
             <div className="panel overflow-hidden">
               <div className="border-b border-[#dfe4dc] p-6">

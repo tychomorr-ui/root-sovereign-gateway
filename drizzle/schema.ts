@@ -622,6 +622,46 @@ export const atmosReceipts = mysqlTable(
   })
 );
 
+export const archangelReceiptImports = mysqlTable(
+  "archangel_receipt_imports",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    receiptId: varchar("receiptId", { length: 160 }).notNull().unique(),
+    receiptHash: varchar("receiptHash", { length: 128 }).notNull().unique(),
+    contract: varchar("contract", { length: 120 }).notNull(),
+    nodeId: varchar("nodeId", { length: 64 }).notNull(),
+    nodeEndpoint: varchar("nodeEndpoint", { length: 500 }).notNull(),
+    nodePublicKeyFingerprint: varchar("nodePublicKeyFingerprint", {
+      length: 64,
+    }).notNull(),
+    artifactSha256: varchar("artifactSha256", { length: 80 }),
+    manifestCid: varchar("manifestCid", { length: 160 }),
+    nodeStatus: mysqlEnum("nodeStatus", [
+      "ok",
+      "degraded",
+      "not_ready",
+    ]).notNull(),
+    boundary: varchar("boundary", { length: 160 }).notNull(),
+    canonicalPayload: text("canonicalPayload").notNull(),
+    signature: text("signature").notNull(),
+    observedAt: timestamp("observedAt").notNull(),
+    expiresAt: timestamp("expiresAt").notNull(),
+    importedByUserId: int("importedByUserId")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    receiptNodeIdx: index("archangel_receipt_imports_node_idx").on(
+      table.nodeId,
+      table.observedAt
+    ),
+    expiryIdx: index("archangel_receipt_imports_expiry_idx").on(
+      table.expiresAt
+    ),
+  })
+);
+
 export const atmosAudits = mysqlTable(
   "atmos_audits",
   {
