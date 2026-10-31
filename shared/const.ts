@@ -5,11 +5,13 @@ export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 
 export const TRUTH_TALK_INTEGRATION_STATUS = {
-  routeArchitecture: "native_root_surface",
+  routeArchitecture: "native_root_surface_plus_verified_static_spa",
   externalIdentityHandoff: "PENDING_CONTRACT",
-  externalSource: "TRUTH_TALK_SOURCE_NOT_PRESENT",
+  externalSource: "VERIFIED_AT_ROOTGATE_TRUTHTALK_PATH",
   dataBoundary: "ROOT_OWNED_LEDGER_IN_CURRENT_BUILD",
 } as const;
+
+export const TRUTH_TALK_STANDALONE_URL = "https://rootgate.nexinus.net/truthtalk/";
 
 // One-time nonce cookie that binds an OAuth login to the browser that started
 // it. The `__Host-` prefix forces the cookie host-only (Secure, Path=/, no
