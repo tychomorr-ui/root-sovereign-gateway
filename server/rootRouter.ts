@@ -23,6 +23,7 @@ import {
   createScopedVouch,
   createService,
   createTruthPost,
+  consumeTruthTalkHandoff,
   exportMemberData,
   findProfileByMemberCode,
   getActiveOperatorForUser,
@@ -98,6 +99,10 @@ import {
   listArchangelReceiptImports,
   publicArchangelReceiptContract,
 } from "./archangelReceipts";
+import {
+  issueTruthTalkHandoff,
+  revokeIssuedTruthTalkHandoff,
+} from "./truthTalkHandoff";
 
 const claimTypeSchema = z.enum(CLAIM_TYPE_VALUES);
 const emergencyTypeSchema = z.enum([
@@ -271,6 +276,21 @@ export const rootRouter = router({
   }),
 
   truthTalk: router({
+    issueHandoff: protectedProcedure.mutation(async ({ ctx }) => {
+      return issueTruthTalkHandoff(ctx.user.id);
+    }),
+    revokeHandoff: protectedProcedure
+      .input(z.object({ jti: z.string().regex(/^[a-f0-9]{32}$/) }))
+      .mutation(async ({ ctx, input }) => {
+        await revokeIssuedTruthTalkHandoff(ctx.user.id, input.jti);
+        return { revoked: true };
+      }),
+    consumeHandoff: protectedProcedure
+      .input(z.object({ jti: z.string().regex(/^[a-f0-9]{32}$/) }))
+      .mutation(async ({ input }) => {
+        const record = await consumeTruthTalkHandoff(input.jti, new Date());
+        return { consumed: Boolean(record), jti: input.jti };
+      }),
     feed: publicProcedure.query(async () => {
       const posts = await listPublicTruthPosts();
       return posts.map(post => ({

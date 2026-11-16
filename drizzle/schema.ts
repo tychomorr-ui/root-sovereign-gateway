@@ -96,6 +96,31 @@ export const consentGrants = mysqlTable(
   })
 );
 
+export const truthTalkHandoffs = mysqlTable(
+  "truth_talk_handoffs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    ownerUserId: int("ownerUserId")
+      .notNull()
+      .references(() => users.id),
+    jti: varchar("jti", { length: 64 }).notNull().unique(),
+    version: varchar("version", { length: 64 }).notNull(),
+    audience: varchar("audience", { length: 64 }).notNull(),
+    scopeJson: text("scopeJson").notNull(),
+    subject: varchar("subject", { length: 96 }).notNull(),
+    displayName: varchar("displayName", { length: 96 }),
+    issuedAt: timestamp("issuedAt").notNull(),
+    expiresAt: timestamp("expiresAt").notNull(),
+    consumedAt: timestamp("consumedAt"),
+    revokedAt: timestamp("revokedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    ownerIdx: index("truth_talk_handoffs_owner_idx").on(table.ownerUserId),
+    expiryIdx: index("truth_talk_handoffs_expiry_idx").on(table.expiresAt),
+  })
+);
+
 export const attestations = mysqlTable(
   "attestations",
   {

@@ -5,9 +5,10 @@ import { trpc } from "@/lib/trpc";
 import { CLAIM_TYPES, deriveFileIntegrityDigest, EMERGENCY_PRIVACY_NOTICE, TRUTH_OK_SIGNAL_LABELS } from "@shared/root";
 import { TRUTH_TALK_STANDALONE_URL } from "@shared/const";
 import { ChevronRight, CircleAlert, ClipboardCheck, Download, FileKey2, HeartHandshake, KeyRound, Loader2, LockKeyhole, MapPinned, Plus, ShieldCheck, Sprout, UserRoundCheck, X } from "lucide-react";
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
+import { ROOT_HANDOFF_TARGET_ORIGIN } from "@shared/handoff";
 
 type WorkspaceSection = "profile" | "permissions" | "record" | "reclaim" | "talk" | "vouches" | "services" | "emergency";
 
@@ -183,6 +184,9 @@ function ProjectReclaimMemberPanel() {
 function TruthTalkPanel() {
   const utils = trpc.useUtils();
   const posts = trpc.root.truthTalk.mine.useQuery();
+  const handoffWindow = useRef<Window | null>(null);
+  const issueHandoff = trpc.root.truthTalk.issueHandoff.useMutation();
+  const consumeHandoff = trpc.root.truthTalk.consumeHandoff.useMutation();
   const [claimType, setClaimType] = useState<(typeof CLAIM_TYPES)[number]["value"]>("report");
   const [body, setBody] = useState("");
   const [sources, setSources] = useState("");
@@ -191,6 +195,34 @@ function TruthTalkPanel() {
   const publish = trpc.root.truthTalk.publish.useMutation({ onSuccess: data => { utils.root.truthTalk.mine.invalidate(); utils.root.truthTalk.feed.invalidate(); setBody(""); setSources(""); toast.success("Truth Talk post published.", { description: data.integrityReceipt }); } });
   const withdraw = trpc.root.truthTalk.withdraw.useMutation({ onSuccess: () => { utils.root.truthTalk.mine.invalidate(); utils.root.truthTalk.feed.invalidate(); toast.success("Post withdrawn with history preserved."); } });
   const submit = (event: FormEvent) => { event.preventDefault(); const sourceUrls = sources.split("\n").map(url => url.trim()).filter(Boolean); publish.mutate({ claimType, body, sourceUrls, evidenceDigest: evidenceDigest || undefined, visibility }); };
+  useEffect(() => {
+    const receive = (event: MessageEvent<unknown>) => {
+      if (event.origin !== ROOT_HANDOFF_TARGET_ORIGIN || !event.data || typeof event.data !== "object") return;
+      const message = event.data as { type?: string; jti?: string };
+      if (message.type === "ROOT_TRUTHTALK_HANDOFF_READY") return;
+      if (message.type === "ROOT_TRUTHTALK_HANDOFF_ACCEPTED" && message.jti) {
+        consumeHandoff.mutate({ jti: message.jti }, { onSuccess: result => toast.success(result.consumed ? "TruthTalk opened with a verified ROOT identity." : "This ROOT handoff was already used or expired.") });
+      } else if (message.type === "ROOT_TRUTHTALK_HANDOFF_REJECTED") {
+        toast.error("TruthTalk rejected the ROOT identity handoff; no identity was shared.");
+      }
+    };
+    window.addEventListener("message", receive);
+    return () => window.removeEventListener("message", receive);
+  }, [consumeHandoff]);
+  const launchTruthTalk = () => {
+    const target = window.open(TRUTH_TALK_STANDALONE_URL, "truth-talk");
+    if (!target) { toast.error("The browser blocked the TruthTalk window. Allow pop-ups and try again."); return; }
+    handoffWindow.current = target;
+    issueHandoff.mutate(undefined, {
+      onSuccess: envelope => {
+        [0, 250, 750, 1500, 2500].forEach(delay => window.setTimeout(() => {
+          if (!handoffWindow.current || handoffWindow.current.closed) return;
+          handoffWindow.current.postMessage({ type: "ROOT_TRUTHTALK_HANDOFF", envelope }, ROOT_HANDOFF_TARGET_ORIGIN);
+        }, delay));
+      },
+      onError: error => { target.close(); toast.error(error.message || "ROOT could not issue a TruthTalk handoff."); },
+    });
+  };
 
   return <>
     <SectionHeading eyebrow="TRUTH TALK" title="Publish the claim, show the path to it.">TruthOK displays separate provenance signals. It does not issue a binary verdict about the claim or the person who made it.</SectionHeading>
@@ -199,7 +231,7 @@ function TruthTalkPanel() {
         <p className="text-xs font-bold tracking-[0.14em] text-[#4d6b27]">STANDALONE TRUTHTALK NETWORK</p>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[#52624c]">ROOT remains the member identity and native claim ledger. The standalone TruthTalk application is the public media workspace; this handoff opens its verified static route without passing a session token or sharing ROOT’s database.</p>
       </div>
-      <a href={TRUTH_TALK_STANDALONE_URL} target="_blank" rel="noreferrer noopener" className="shrink-0"><Button type="button" className="rounded-full bg-[#18211c] text-white hover:bg-[#293b2e]">Open standalone TruthTalk <ChevronRight className="ml-1 h-4 w-4" /></Button></a>
+      <Button type="button" onClick={launchTruthTalk} disabled={issueHandoff.isPending} className="shrink-0 rounded-full bg-[#18211c] text-white hover:bg-[#293b2e]">{issueHandoff.isPending ? "Preparing handoff…" : "Open standalone TruthTalk"} <ChevronRight className="ml-1 h-4 w-4" /></Button>
     </section>
     <LocalFileDigestControl digest={evidenceDigest} onDigest={setEvidenceDigest} />
     <div className="grid gap-5 2xl:grid-cols-[.82fr_1.18fr]"><form onSubmit={submit} className="panel p-6"><div className="flex items-center justify-between"><h2 className="font-serif text-2xl">New claim</h2><span className="rounded-full bg-[#e8f6c8] px-3 py-1 text-[10px] font-bold tracking-[0.12em] text-[#496129]">PROVENANCE LED</span></div><label className="field-label mt-5" htmlFor="claim-type">Declared claim type</label><select id="claim-type" value={claimType} onChange={event => setClaimType(event.target.value as typeof claimType)} className="field-input mt-2">{CLAIM_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}</select><label className="field-label mt-4" htmlFor="post-body">Claim</label><textarea id="post-body" required minLength={12} value={body} onChange={event => setBody(event.target.value)} className="field-input mt-2 min-h-36 resize-y" placeholder="Write the statement you want readers to evaluate." /><label className="field-label mt-4" htmlFor="sources">Source URLs</label><textarea id="sources" value={sources} onChange={event => setSources(event.target.value)} className="field-input mt-2 min-h-24 resize-y" placeholder="One HTTPS URL per line (optional)." /><label className="field-label mt-4" htmlFor="visibility">Visibility</label><select id="visibility" value={visibility} onChange={event => setVisibility(event.target.value as typeof visibility)} className="field-input mt-2"><option value="public">Public in Truth Talk</option><option value="members">ROOT members</option><option value="private">Only me</option></select><Button disabled={publish.isPending} type="submit" className="mt-6 w-full rounded-xl bg-[#18211c] text-white hover:bg-[#25362a]"><Plus className="mr-2 h-4 w-4" />Publish with integrity receipt</Button></form>

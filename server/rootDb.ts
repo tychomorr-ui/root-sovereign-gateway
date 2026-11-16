@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import {
   attestations,
   consentGrants,
@@ -17,6 +17,7 @@ import {
   scopedVouches,
   services,
   truthPosts,
+  truthTalkHandoffs,
 } from "../drizzle/schema";
 import { getDb } from "./db";
 
@@ -118,6 +119,54 @@ export async function revokeConsentGrant(ownerUserId: number, grantId: number) {
     eq(consentGrants.id, grantId),
     eq(consentGrants.ownerUserId, ownerUserId),
   ));
+}
+
+export async function createTruthTalkHandoff(input: {
+  ownerUserId: number;
+  jti: string;
+  version: string;
+  audience: string;
+  scope: string[];
+  subject: string;
+  displayName: string | null;
+  issuedAt: Date;
+  expiresAt: Date;
+}) {
+  const db = requireDb(await getDb());
+  await db.insert(truthTalkHandoffs).values({
+    ownerUserId: input.ownerUserId,
+    jti: input.jti,
+    version: input.version,
+    audience: input.audience,
+    scopeJson: JSON.stringify(input.scope),
+    subject: input.subject,
+    displayName: input.displayName,
+    issuedAt: input.issuedAt,
+    expiresAt: input.expiresAt,
+  });
+}
+
+export async function revokeTruthTalkHandoff(ownerUserId: number, jti: string) {
+  const db = requireDb(await getDb());
+  await db.update(truthTalkHandoffs).set({ revokedAt: new Date() }).where(and(
+    eq(truthTalkHandoffs.ownerUserId, ownerUserId),
+    eq(truthTalkHandoffs.jti, jti),
+    isNull(truthTalkHandoffs.consumedAt),
+  ));
+}
+
+export async function consumeTruthTalkHandoff(jti: string, now: Date) {
+  const db = requireDb(await getDb());
+  const result = await db.update(truthTalkHandoffs).set({ consumedAt: now }).where(and(
+    eq(truthTalkHandoffs.jti, jti),
+    isNull(truthTalkHandoffs.consumedAt),
+    isNull(truthTalkHandoffs.revokedAt),
+    gt(truthTalkHandoffs.expiresAt, now),
+  ));
+  const affectedRows = (result as unknown as { affectedRows?: number }).affectedRows ?? 0;
+  if (!affectedRows) return null;
+  const rows = await db.select().from(truthTalkHandoffs).where(eq(truthTalkHandoffs.jti, jti)).limit(1);
+  return rows[0] ?? null;
 }
 
 export async function listMemberAttestations(userId: number) {
